@@ -49,6 +49,8 @@ int main(int argc, char *argv[]) {
 		fs = std::unique_ptr<FileSystem>(new FileSystem(disk.get()));
 		fs->superblock->init(0.1);
 		superblock = fs->superblock.get();
+		
+		close(fh);
 
 		fs = nullptr;
 		disk = nullptr;
