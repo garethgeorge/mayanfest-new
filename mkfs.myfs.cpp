@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 		std::unique_ptr<Disk> disk = nullptr;
 		SuperBlock *superblock = nullptr;
 
-		int fh = open(backing_file_path, O_RDWR | O_CREAT | S_IRUSR | S_IWUSR);
+		int fh = open(backing_file_path, O_RDWR | O_CREAT, 0666);
 		lseek(fh, file_size_in_bytes - 1, SEEK_SET);
 		const char *empty = "";
 		write(fh, empty, 1);
