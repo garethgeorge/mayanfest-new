@@ -7,7 +7,7 @@ class IntegrationTest(unittest.TestCase):
 
     def setUp(self):
         ''' setup '''
-        self.mountPoint = '../mountpoint'
+        self.mountPoint = '../build/mount'
         self.testPoint = '../../testpoint'
         os.mkdir(self.testPoint)
 
@@ -18,7 +18,7 @@ class IntegrationTest(unittest.TestCase):
 
     def testSetup(self):
         ''' simple test '''
-        assert self.mountPoint == '../mountpoint'
+        assert self.mountPoint == '../build/mount'
         assert self.testPoint == '../../testpoint'
 
     def testMkdir(self):
