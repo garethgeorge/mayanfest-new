@@ -153,7 +153,7 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
     fprintf(stdout, "INode::resolve_indirection for chunk_number %llu (inode no: %llu)\n", chunk_number, this->inode_table_idx);
 #endif 
 
-    uint64_t *indirect_table = data.addresses;
+    uint64_t *indirect_table = data.addresses; 
     for(uint64_t indirection = 0; indirection < sizeof(INDIRECT_TABLE_SIZES) / sizeof(uint64_t); indirection++){
 #ifdef DEBUG 
         fprintf(stdout, 
@@ -202,7 +202,7 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
             // TODO: implement locking on this chunk, this will be HARD HARD HARD because of all the places
             // the reference to the chunk is changed
 
-            while (indirection != 0){
+            while (indirection != 0) {
                 indirect_address_count /= num_chunk_address_per_chunk;
 #ifdef DEBUG 
                 fprintf(stdout, "\tcurrent indirect level is: %llu, indirect block id is: %llu\n", indirection, chunk->chunk_idx);
