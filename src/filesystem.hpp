@@ -9,6 +9,7 @@
 #include <string>
 #include <cassert>
 #include <sys/stat.h>
+#include <cassert>
 
 #include "diskinterface.hpp"
 
@@ -120,8 +121,8 @@ struct SegmentController {
 			throw FileSystemException("Could not find free enough segments to clean");
 		}
 
-		ASSERT(num_chunks_to_combine > 0);
-		ASSERT(num_chunks_to_combine <= segment_size - 1);
+		assert(num_chunks_to_combine > 0);
+		assert(num_chunks_to_combine <= segment_size - 1);
 
 		//create the new segment first
 		set_segment_usage(new_segment, num_chunks_to_combine);
@@ -131,7 +132,7 @@ struct SegmentController {
 			std::shared_ptr<Chunk> metadata_chunk = disk->get_chunk(data_offset + sn * segment_size);
 
 			//loop over the segment and grab all of the actual data
-			for(uint64_t cn = 1, cn < segment_size, cn ++) {
+			for(uint64_t cn = 1; cn < segment_size; cn++) {
 				uint64_t inode_num = get_segment_chunk_to_inode(sn, cn);
 				if(inode_num != 0) {
 					set_segment_chunk_to_inode(new_segment, write_head, inode_num);
