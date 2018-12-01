@@ -1,0 +1,39 @@
+\documentclass{beamer}
+
+\usepackage{tikz}
+\usetikzlibrary{er}
+
+\mode<presentation>{
+	\usetheme{Madrid}
+	\usecolortheme{whale}
+	\setbeamercovered{transparent}
+}
+
+\title[FS Implementation]{{\small CS270: Advanced Operating Systems}\\Course Project on File System Implementation}
+\author[THE Team]{Gareth George \and Thomas Schibler \and Nazmus Saquib}
+\institute[CS grads, UCSB]{Graduate Students\\
+Department of Computer Science\\
+University of California Santa Barbara}
+\titlegraphic{\includegraphics[width=0.2\textwidth]{ucsb-logo.png}}
+
+\begin{document}
+\newcommand{\continued}{\textit{(Cntd.)}}
+%titlepage
+\begin{frame}
+\titlepage
+\end{frame}
+
+% introduce members
+% what is the architecture of the solution
+% basics/beyond basics: what things did you try to figure out
+% what challenges
+% what new things
+% what part of the project led us to think in an unusual way about OS
+\input{introduction}
+\input{architecture}
+\input{beyond-basics}
+\input{challenges}
+\input{conclusion}
+\input{questions}
+
+\end{document}
