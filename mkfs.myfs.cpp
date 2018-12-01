@@ -33,8 +33,12 @@ int main(int argc, char *argv[]) {
 		std::unique_ptr<Disk> disk = nullptr;
 		SuperBlock *superblock = nullptr;
 
-		int fh = open(backing_file_path, O_RDWR | O_CREAT | S_IRUSR | S_IWUSR);
-		truncate(backing_file_path, file_size_in_bytes);
+		int fh = open(backing_file_path, O_RDWR | O_CREAT, 0666);
+		lseek(fh, file_size_in_bytes - 1, SEEK_SET);
+		const char *empty = "";
+		write(fh, empty, 1);
+
+		// truncate(backing_file_path, file_size_in_bytes);
 		if (fh == -1) {
 			fprintf(stdout, "failed to get a handle on the requestd file: %s\n", backing_file_path);
 			return 1;
@@ -45,6 +49,8 @@ int main(int argc, char *argv[]) {
 		fs = std::unique_ptr<FileSystem>(new FileSystem(disk.get()));
 		fs->superblock->init(0.1);
 		superblock = fs->superblock.get();
+		
+		close(fh);
 
 		fs = nullptr;
 		disk = nullptr;

@@ -118,7 +118,8 @@ public:
 		: _chunk_size(chunk_size_ctr), _size_chunks(size_chunk_ctr) {
 		
 		this->data = (Byte *)mmap(NULL, this->size_bytes(), PROT_READ | PROT_WRITE, flags, fd, 0);
-		if (this->data == NULL) {
+		if (this->data == MAP_FAILED) {
+			fprintf(stdout, "MMAP failed for file handle %d\n", fd);
 			throw DiskException("failed to create the memory mapped file to back the disk");
 		}
 	}
