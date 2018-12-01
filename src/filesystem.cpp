@@ -266,7 +266,7 @@ void INode::release_chunks() {
         if (chunk == nullptr) 
             continue ;
         fprintf(stdout, "%d, ", chunk->chunk_idx);
-        this->superblock->free_chunk(std::move(chunk));
+        this->superblock->segment_controller.free_chunk(std::move(chunk));
     }
     fprintf(stdout, ".\n");
 }
@@ -580,6 +580,11 @@ void SuperBlock::load_from_disk() {
     segment_controller.data_offset = this->data_offset;
     segment_controller.segment_size = segment_size_chunks;
     segment_controller.num_segments = this->num_segments;
+    
+    //Attempt at per segment locking
+    /*for(int i = 0; i < num_segments; i++) {
+        segment_controller.single_segment_locks.emplace_back();
+    }*/
     segment_controller.set_new_free_segment();
 
     fprintf(stdout, "loaded segment_controller with options:\n"
