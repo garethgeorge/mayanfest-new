@@ -150,7 +150,7 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
     uint64_t indirect_address_count = 1;
 
 #ifdef DEBUG
-    fprintf(stdout, "INode::resolve_indirection for chunk_number %llu\n", chunk_number);
+    fprintf(stdout, "INode::resolve_indirection for chunk_number %llu (inode no: %llu)\n", chunk_number, this->inode_table_idx);
 #endif 
 
     uint64_t *indirect_table = data.addresses;
@@ -179,7 +179,7 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
                     return nullptr;
                 }
 
-                std::shared_ptr<Chunk> newChunk = this->superblock->allocate_chunk();
+                std::shared_ptr<Chunk> newChunk = this->superblock->allocate_chunk(this->inode_table_idx);
 #ifdef DEBUG 
                 fprintf(stdout, "next_chunk_loc was 0, so we created new "
                     "chunk id %zu/%llu and placed it in the table\n", 
@@ -223,7 +223,7 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
                         return nullptr;
                     }
 
-                    std::shared_ptr<Chunk> newChunk = this->superblock->allocate_chunk();
+                    std::shared_ptr<Chunk> newChunk = this->superblock->allocate_chunk(this->inode_table_idx);
                     std::memset((void *)newChunk->data, 0, newChunk->size_bytes);
                     next_chunk_loc = newChunk->chunk_idx;
                     lookup_table[chunk_number / indirect_address_count] = newChunk->chunk_idx;
@@ -429,6 +429,33 @@ void SuperBlock::init(double inode_table_size_rel_to_disk) {
 
     this->data_offset = offset;
 
+     //segment the free data block space
+    this->num_segments = 0;
+    segment_size_chunks = 2 * (disk_chunk_size / 4);
+    while(this->num_segments < 20) {
+        segment_size_chunks /= 2;
+        this->num_segments = (disk_size_chunks - data_offset - 1) / segment_size_chunks;
+    }
+
+    if (this->num_segments == 0) {
+        throw FileSystemException("Num segments is equal to zero, this should never happen.");
+    }
+    
+    segment_controller.disk = disk;
+    segment_controller.data_offset = data_offset;
+    segment_controller.segment_size = segment_size_chunks;
+    segment_controller.num_segments = num_segments;
+    segment_controller.clear_all_segments();
+    segment_controller.set_new_free_segment();
+
+    fprintf(stdout, "loaded segment_controller with options:\n"
+        "\tdata offset: %llu\n" 
+        "\tsegment_size: %llu\n"
+        "\tnum_segments: %llu\n",
+        segment_controller.data_offset, 
+        segment_controller.segment_size,
+        segment_controller.num_segments);
+
     //setup root directory
     std::shared_ptr<INode> inode = this->inode_table->alloc_inode();
     IDirectory root_dir(*inode);
@@ -441,28 +468,53 @@ void SuperBlock::init(double inode_table_size_rel_to_disk) {
     {
         auto sb_chunk = disk->get_chunk(0);
         Byte* sb_data = sb_chunk->data;
+        uint64_t *data_slots = (uint64_t *)sb_data;
+
         uint64_t offset = 0;
-        *(uint64_t *)(sb_data+offset) = superblock_size_chunks;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = disk_size_bytes;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = disk_size_chunks;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = disk_chunk_size;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = disk_block_map_offset;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = disk_block_map_size_chunks;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = inode_table_offset;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = inode_table_size_chunks;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = inode_table_inode_count;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = data_offset;
-        offset += sizeof(uint64_t);
-        *(uint64_t *)(sb_data+offset) = root_inode_index;
+
+        data_slots[0] = superblock_size_chunks;
+        data_slots[1] = disk_size_bytes;
+        data_slots[2] = disk_size_chunks;
+        data_slots[3] = disk_chunk_size;
+        data_slots[4] = disk_block_map_offset;
+        data_slots[5] = disk_block_map_size_chunks;
+        data_slots[6] = inode_table_offset;
+        data_slots[7] = inode_table_size_chunks;
+        data_slots[8] = inode_table_inode_count;
+        data_slots[9] = data_offset;
+        data_slots[10] = segment_size_chunks;
+        data_slots[11] = this->num_segments;
+        data_slots[12] = root_inode_index;
+
+        // *(uint64_t *)(sb_data+offset) = superblock_size_chunks;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = disk_size_bytes;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = disk_size_chunks;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = disk_chunk_size;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = disk_block_map_offset;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = disk_block_map_size_chunks;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = inode_table_offset;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = inode_table_size_chunks;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = inode_table_inode_count;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = data_offset;
+
+        // segment controller data
+        // *(uint64_t *)(sb_data+offset) = segment_size_chunks;
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = this->num_segments;
+        // offset += sizeof(uint64_t);
+
+        // offset += sizeof(uint64_t);
+        // *(uint64_t *)(sb_data+offset) = root_inode_index;
+
         disk->flush_chunk(*sb_chunk);
         {
             auto sb_chunk = disk->get_chunk(0);
@@ -477,53 +529,31 @@ void SuperBlock::load_from_disk() {
     // //std::cout << "ENTERING LOAD_FROM_DISK" << std::endl;
     auto sb_chunk = disk->get_chunk(0);
     auto sb_data = sb_chunk->data;
-    uint64_t offset = 0;
+    uint64_t *data_slots = (uint64_t *)sb_data;
     //superblock_size_chunks = *(uint64_t *)(sb_data + offset);
     //TODO: throw an error code that filesystem was corrupted instead /////////////////////////////////////////////
-    if(superblock_size_chunks != *(uint64_t *)(sb_data + offset)) {
-      throw new FileSystemException("Stored superblock size corrupted!");
-    }
-    offset += sizeof(uint64_t);
-    //disk_size_bytes = *(uint64_t *)(sb_data+offset);
-    if(disk_size_bytes != *(uint64_t *)(sb_data + offset)) {
-      throw new FileSystemException("Stored disk size in bytes corrupted!");
-    }
-    offset += sizeof(uint64_t);
-    //disk_size_chunks = *(uint64_t *)(sb_data+offset);
-    if(disk_size_chunks != *(uint64_t *)(sb_data + offset)) {
-      throw new FileSystemException("Stored disk size in chunks corrupted!");
-    }
-    offset += sizeof(uint64_t);
-    //disk_chunk_size = *(uint64_t *)(sb_data+offset);
-    if(disk_chunk_size != *(uint64_t *)(sb_data + offset)) {
-      throw new FileSystemException("Stored disk chunk size corrupted!");
-    }
-    offset += sizeof(uint64_t);
-    uint64_t disk_block_map_offset = *(uint64_t *)(sb_data+offset);
-    offset += sizeof(uint64_t);
-    uint64_t disk_block_map_size_chunks = *(uint64_t *)(sb_data+offset);
-    offset += sizeof(uint64_t);
-    uint64_t inode_table_offset = *(uint64_t *)(sb_data+offset);
-    offset += sizeof(uint64_t);
-    uint64_t inode_table_size_chunks = *(uint64_t *)(sb_data+offset);
-    offset += sizeof(uint64_t);
-    uint64_t inode_table_inode_count = *(uint64_t *)(sb_data+offset);
-    offset += sizeof(uint64_t);
-    data_offset = *(uint64_t *)(sb_data+offset);
-    offset += sizeof(uint64_t);
-    this->root_inode_index = *(uint64_t *)(sb_data+offset);
 
-    offset = this->superblock_size_chunks;
+    assert(superblock_size_chunks == data_slots[0]);
+    assert(disk_size_bytes == data_slots[1]);
+    assert(disk_size_chunks == data_slots[2]);
+    assert(disk_chunk_size == data_slots[3]);
+    disk_block_map_offset = data_slots[4];
+    disk_block_map_size_chunks = data_slots[5];
+    inode_table_offset = data_slots[6];
+    inode_table_size_chunks = data_slots[7];
+    inode_table_inode_count = data_slots[8];
+    data_offset = data_slots[9];
+    segment_size_chunks = data_slots[10];
+    this->num_segments = data_slots[11];
+    root_inode_index = data_slots[12];
 
     // initialize the disk block map
     {
         this->disk_block_map = std::unique_ptr<DiskBitMap>(
-            new DiskBitMap(this->disk, offset, disk->size_chunks()));
+            new DiskBitMap(this->disk, this->disk_block_map_offset, disk->size_chunks()));
         // this->disk_block_map->clear_all();
         // set the properties on the superblock for the blockmap
-        this->disk_block_map_offset = offset;
-        this->disk_block_map_size_chunks = this->disk_block_map->size_chunks();
-        offset += this->disk_block_map->size_chunks();
+        assert(this->disk_block_map_size_chunks == this->disk_block_map->size_chunks());
 
         if (this->disk_block_map_offset != disk_block_map_offset || 
             this->disk_block_map_size_chunks != disk_block_map_size_chunks) {
@@ -532,28 +562,36 @@ void SuperBlock::load_from_disk() {
     }
     
     // initialize the inode table
-    {   
-        uint64_t inode_count_to_request = inode_table_inode_count;
-
+    {
         this->inode_table = std::unique_ptr<INodeTable>(
-            new INodeTable(this, offset, inode_count_to_request));
+            new INodeTable(this, this->inode_table_offset, inode_table_inode_count));
         // this->inode_table->format_inode_table();
-        this->inode_table_offset = offset;
         this->inode_table_size_chunks = this->inode_table->size_chunks();
-        offset += this->inode_table->size_chunks();
 
-        if (this->inode_table_offset != inode_table_offset || 
-            this->inode_table_size_chunks != inode_table_size_chunks) {
+        if (this->inode_table_offset != this->inode_table->inode_table_offset || 
+            this->inode_table_size_chunks != this->inode_table->size_chunks()) {
             throw FileSystemException("The inode table became corrupted when attempting to load it");
         }
     }
 
-    this->data_offset = offset;
+    assert(this->num_segments != 0);
+    // initialize the segment controller 
+    segment_controller.disk = disk;
+    segment_controller.data_offset = this->data_offset;
+    segment_controller.segment_size = segment_size_chunks;
+    segment_controller.num_segments = this->num_segments;
+    segment_controller.set_new_free_segment();
+
+    fprintf(stdout, "loaded segment_controller with options:\n"
+        "\tdata offset: %llu\n" 
+        "\tsegment_size: %llu\n"
+        "\tnum_segments: %llu\n",
+        segment_controller.data_offset, 
+        segment_controller.segment_size,
+        segment_controller.num_segments);
 
     // finally, these two values should add up
-    if (this->data_offset != data_offset) {
-        throw FileSystemException("found the wrong final data offset after loading the inode table. Something went wrong.");
-    }
+    uint64_t offset = this->data_offset;
 
     // also check that the disk bit map marks every chunk up to the data offset as in use
     for(uint64_t bit_i = 0; bit_i < offset; ++bit_i) {
