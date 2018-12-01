@@ -4,3 +4,9 @@ test
 *~
 build
 myfs 
+presentation/*.log
+presentation/*.aux
+presentation/*.nav
+presentation/*.out
+presentation/*.snm
+presentation/*.toc
