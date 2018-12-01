@@ -132,12 +132,14 @@ struct SegmentController {
 		if (!chunk_to_free.unique()) {
 			throw FileSystemException("FileSystem free chunk failed -- the chunk passed was not 'unique', something else is using it");
 		}
-		//lock the segment controller
+		// lock the segment controller
 		std::lock_guard<std::mutex> lock(segment_controller_lock);
-		//get the segment and relative chunk number
+		// get the segment and relative chunk number
 		uint64_t segment_number = (chunk_to_free->chunk_idx - data_offset) / segment_size;
+		assert(segment_number < this->num_segments);
 		uint64_t chunk_number = chunk_to_free->chunk_idx - (segment_number * segment_size) - data_offset;
-		//clear the inode mapping
+		assert(chunk_number < segment_size);
+		//clear the inode mapping (Gareth's comment: clears the mapping from chunks in the segment to the inodes that reference them)
 		set_segment_chunk_to_inode(segment_number, chunk_number, 0);
 		//decrement segment usage
 		uint64_t usage = get_segment_usage(segment_number);

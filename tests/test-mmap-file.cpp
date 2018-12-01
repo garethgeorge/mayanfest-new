@@ -39,7 +39,7 @@ TEST_CASE( "Should be able to construct a filesystem in a memory mapped file", "
 
 TEST_CASE("INodes can be used to store and read directories on a mmap'd disk", "[mmap]") {
 	constexpr uint64_t CHUNK_COUNT = 4096;
-	constexpr uint64_t CHUNK_SIZE = 512;
+	constexpr uint64_t CHUNK_SIZE = 4096;
 
 	truncate("disk.myanfest", CHUNK_COUNT * CHUNK_SIZE);
 	int fh = open("disk.myanfest", O_RDWR | O_CREAT);

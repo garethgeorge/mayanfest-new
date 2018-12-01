@@ -448,13 +448,13 @@ void SuperBlock::init(double inode_table_size_rel_to_disk) {
     segment_controller.clear_all_segments();
     segment_controller.set_new_free_segment();
 
-    fprintf(stdout, "loaded segment_controller with options:\n"
-        "\tdata offset: %llu\n" 
-        "\tsegment_size: %llu\n"
-        "\tnum_segments: %llu\n",
-        segment_controller.data_offset, 
-        segment_controller.segment_size,
-        segment_controller.num_segments);
+    // fprintf(stdout, "loaded segment_controller with options:\n"
+    //     "\tdata offset: %llu\n" 
+    //     "\tsegment_size: %llu\n"
+    //     "\tnum_segments: %llu\n",
+    //     segment_controller.data_offset, 
+    //     segment_controller.segment_size,
+    //     segment_controller.num_segments);
 
     //setup root directory
     std::shared_ptr<INode> inode = this->inode_table->alloc_inode();
@@ -587,13 +587,13 @@ void SuperBlock::load_from_disk() {
     }*/
     segment_controller.set_new_free_segment();
 
-    fprintf(stdout, "loaded segment_controller with options:\n"
-        "\tdata offset: %llu\n" 
-        "\tsegment_size: %llu\n"
-        "\tnum_segments: %llu\n",
-        segment_controller.data_offset, 
-        segment_controller.segment_size,
-        segment_controller.num_segments);
+    // fprintf(stdout, "loaded segment_controller with options:\n"
+    //     "\tdata offset: %llu\n" 
+    //     "\tsegment_size: %llu\n"
+    //     "\tnum_segments: %llu\n",
+    //     segment_controller.data_offset, 
+    //     segment_controller.segment_size,
+    //     segment_controller.num_segments);
 
     // finally, these two values should add up
     uint64_t offset = this->data_offset;
