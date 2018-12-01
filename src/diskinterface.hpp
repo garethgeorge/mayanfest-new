@@ -41,15 +41,24 @@ struct Chunk {
 };
 
 
-template<typename K, typename V>
+template<typename K, typename V, size_t cache_size = 0>
 class SharedObjectCache {
 private:
 	size_t size_next_sweep = 16;
 	std::unordered_map<K, std::weak_ptr<V>> map;
+	std::shared_ptr<V> cache[cache_size];
 public:
+	SharedObjectCache() {
+		this->sweep(true);
+	}
+
 	void sweep(bool force) {
 		if (!force && map.size() < size_next_sweep)
 			return ;
+
+		for (size_t i = 0; i < cache_size; ++i) {
+			cache[i] = nullptr;
+		}
 
 		for (auto it = this->map.cbegin(); it != this->map.cend();){
 			if ((*it).second.expired()) {
@@ -62,9 +71,12 @@ public:
 		size_next_sweep = this->map.size() < 16 ? 16 : this->map.size();
 	}
 
-	void put(const K& k, std::weak_ptr<V> v) {
+	void put(const K& k, std::shared_ptr<V> v) {
 		map[k] = std::move(v);
 		this->sweep(false);
+		if (cache_size > 0) {
+			cache[rand() % cache_size] = v;
+		}
 	}
 
 	std::shared_ptr<V> get(const K& k) {
@@ -91,6 +103,7 @@ public:
 class Disk {
 private:
 	// properties of the class
+	int fd = -1;
 	const Size _size_chunks;
 	const Size _chunk_size;
 	const size_t _mempage_size = sysconf(_SC_PAGESIZE); // get the memory page size;
@@ -101,7 +114,7 @@ private:
 	std::mutex lock;
 
 	// a cache of chunks that are loaded in
-	SharedObjectCache<Size, Chunk> chunk_cache;
+	SharedObjectCache<Size, Chunk, 0> chunk_cache;
 
 	// loops over weak pointers, if any of them are expired, it deletes 
 	// the entries from the unordered map 
@@ -117,6 +130,7 @@ public:
 		int flags = MAP_PRIVATE | MAP_ANONYMOUS, int fd = -1) 
 		: _chunk_size(chunk_size_ctr), _size_chunks(size_chunk_ctr) {
 		
+		this->fd = fd;
 		this->data = (Byte *)mmap(NULL, this->size_bytes(), PROT_READ | PROT_WRITE, flags, fd, 0);
 		if (this->data == MAP_FAILED) {
 			fprintf(stdout, "MMAP failed for file handle %d\n", fd);
