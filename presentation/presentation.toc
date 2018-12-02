@@ -1,6 +1,7 @@
 \beamer@sectionintoc {1}{Introduction}{2}{0}{1}
-\beamer@sectionintoc {2}{Architecture}{3}{0}{2}
-\beamer@sectionintoc {3}{Beyond Basics}{4}{0}{3}
-\beamer@sectionintoc {4}{Challenges}{5}{0}{4}
-\beamer@sectionintoc {5}{Conclusion}{6}{0}{5}
-\beamer@sectionintoc {6}{Questions}{7}{0}{6}
+\beamer@sectionintoc {2}{Architecture}{14}{0}{2}
+\beamer@sectionintoc {3}{Beyond Basics}{16}{0}{3}
+\beamer@sectionintoc {4}{Challenges}{20}{0}{4}
+\beamer@sectionintoc {5}{Performance Benchmark}{26}{0}{5}
+\beamer@sectionintoc {6}{Conclusion}{28}{0}{6}
+\beamer@sectionintoc {7}{Questions}{30}{0}{7}
