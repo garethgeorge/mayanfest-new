@@ -585,6 +585,16 @@ void SuperBlock::load_from_disk() {
     /*for(int i = 0; i < num_segments; i++) {
         segment_controller.single_segment_locks.emplace_back();
     }*/
+
+    //count free segments
+    segment_controller.num_free_segments = 0;
+    for(int i = 0; i < num_segments; i++) {
+        if(segment_controller.get_segment_usage(i) == 0) {
+            segment_controller.num_free_segments += 1;
+        }
+    }
+
+    //prepare for writes!
     segment_controller.set_new_free_segment();
 
     // fprintf(stdout, "loaded segment_controller with options:\n"

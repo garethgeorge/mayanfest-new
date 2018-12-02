@@ -437,6 +437,43 @@ static int myfs_unlink(const char *path) {
 	return 0;
 }
 
+static int myfs_chmod(const char *path, mode_t mode){
+	
+	struct fuse_context *ctx = fuse_get_context();
+
+	std::shared_ptr<INode> inode;
+	inode = resolve_path(path);
+
+	if(ctx->uid == inode->data.UID){
+		inode->data.permissions = mode & 00777;
+		return 0;
+	}
+
+	return -1;
+
+}
+
+static int myfs_chown(const char *path, uid_t owner, gid_t group){
+	
+	struct fuse_context *ctx = fuse_get_context();
+
+	std::shared_ptr<INode> inode;
+	inode = resolve_path(path);
+
+	if(ctx->uid == 0){
+		if(owner != -1) inode->data.UID = owner;
+		if(group != -1) inode->data.GID = group;
+		return 0;
+	}
+
+	return -1;
+
+}
+
+// CHECK TO MAKE SURE THEY CAN'T REMOVE . AND ..
+// static int myfs_rmdir(const char *path) {
+// 	fprintf(stdout, "myfs_unlink(%s)\n", path);
+// 	struct fuse_context *ctx = fuse_get_context();
 static int myfs_rmdir(const char *path) {
 	std::lock_guard<std::mutex> g(lock_g);
 	fprintf(stdout, "myfs_unlink(%s)\n", path);
@@ -599,6 +636,8 @@ int main(int argc, char *argv[])
 	myfs_oper.mkdir = myfs_mkdir;
 	myfs_oper.utimens = myfs_utimens;
 	myfs_oper.unlink = myfs_unlink;
+	myfs_oper.chmod = myfs_chmod;
+	myfs_oper.chown = myfs_chown;
 	myfs_oper.rmdir = myfs_rmdir;
 	
 	return fuse_main(args.argc, args.argv, &myfs_oper, NULL);

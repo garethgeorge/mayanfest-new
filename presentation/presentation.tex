@@ -1,7 +1,6 @@
 \documentclass{beamer}
 
 \usepackage{tikz}
-\usetikzlibrary{er}
 
 \mode<presentation>{
 	\usetheme{Madrid}
@@ -16,8 +15,18 @@ Department of Computer Science\\
 University of California Santa Barbara}
 \titlegraphic{\includegraphics[width=0.2\textwidth]{ucsb-logo.png}}
 
+\AtBeginSection[]
+{
+  \begin{frame}<beamer>
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
 \begin{document}
 \newcommand{\continued}{\textit{(Cntd.)}}
+\newcommand\pro{\item[$+$]}
+\newcommand\con{\item[$-$]}
 %titlepage
 \begin{frame}
 \titlepage
@@ -33,6 +42,7 @@ University of California Santa Barbara}
 \input{architecture}
 \input{beyond-basics}
 \input{challenges}
+\input{performance-benchmark}
 \input{conclusion}
 \input{questions}
 

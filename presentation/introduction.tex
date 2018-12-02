@@ -1,7 +1,29 @@
 \section{Introduction}
+
 \begin{frame}
 \frametitle{Introduction}
+	Design goals:\\[0.5em]
+	\begin{itemize}[<+->]
+	\setlength\itemsep{1em}
+	\item High reliability
+	\item Simplicity
+	\item Memory mapped files
+		\begin{itemize}
+			\item performance gain at the cost of reliability
+			\item acceptable for high performance system
+			\item can be seen in Mach
+		\end{itemize}
+	\item General data structures
+	\item Log structured file system (LFS)
+\end{itemize}
+\end{frame}
 
-We are Mayanfest
-
+\begin{frame}
+	\frametitle{Introduction: Memory Mapped Files}
+	\begin{itemize}[<+->]
+		\setlength\itemsep{1em}
+		\pro Efficient paging as kernel handles it
+		\con Lesser direct control
+		\con Restricts fine-grained control over writes
+	\end{itemize}
 \end{frame}
