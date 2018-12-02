@@ -440,11 +440,12 @@ void SuperBlock::init(double inode_table_size_rel_to_disk) {
     if (this->num_segments == 0) {
         throw FileSystemException("Num segments is equal to zero, this should never happen.");
     }
-    
+
     segment_controller.disk = disk;
     segment_controller.data_offset = data_offset;
     segment_controller.segment_size = segment_size_chunks;
     segment_controller.num_segments = num_segments;
+    segment_controller.free_segment_stat_offset = 13;
     segment_controller.clear_all_segments();
     segment_controller.set_new_free_segment();
 
@@ -485,48 +486,15 @@ void SuperBlock::init(double inode_table_size_rel_to_disk) {
         data_slots[10] = segment_size_chunks;
         data_slots[11] = this->num_segments;
         data_slots[12] = root_inode_index;
-
-        // *(uint64_t *)(sb_data+offset) = superblock_size_chunks;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = disk_size_bytes;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = disk_size_chunks;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = disk_chunk_size;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = disk_block_map_offset;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = disk_block_map_size_chunks;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = inode_table_offset;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = inode_table_size_chunks;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = inode_table_inode_count;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = data_offset;
-
-        // segment controller data
-        // *(uint64_t *)(sb_data+offset) = segment_size_chunks;
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = this->num_segments;
-        // offset += sizeof(uint64_t);
-
-        // offset += sizeof(uint64_t);
-        // *(uint64_t *)(sb_data+offset) = root_inode_index;
+        //the segment controller will be able to write to this offset on disk, currently 13
+        data_slots[segment_controller.free_segment_stat_offset] = segment_controller.num_free_segments;
 
         disk->flush_chunk(*sb_chunk);
-        {
-            auto sb_chunk = disk->get_chunk(0);
-            Byte* sb_data = sb_chunk->data;
-            int offset = 0;
-            //std::cout << "END OF INIT: " << *(uint64_t *)(sb_data+offset) << std::endl;
-        }
     }
 }
 
 void SuperBlock::load_from_disk() {
-    // //std::cout << "ENTERING LOAD_FROM_DISK" << std::endl;
+    std::cout << "ENTERING LOAD_FROM_DISK" << std::endl;
     auto sb_chunk = disk->get_chunk(0);
     auto sb_data = sb_chunk->data;
     uint64_t *data_slots = (uint64_t *)sb_data;
@@ -547,6 +515,9 @@ void SuperBlock::load_from_disk() {
     this->num_segments = data_slots[11];
     root_inode_index = data_slots[12];
 
+
+    std::cout << "We don't need to do this next part, but here we go" << std::endl;
+
     // initialize the disk block map
     {
         this->disk_block_map = std::unique_ptr<DiskBitMap>(
@@ -561,6 +532,8 @@ void SuperBlock::load_from_disk() {
         }
     }
     
+    std::cout << "continuing with stuff we do need, inodes" << std::endl;
+
     // initialize the inode table
     {
         this->inode_table = std::unique_ptr<INodeTable>(
@@ -574,25 +547,21 @@ void SuperBlock::load_from_disk() {
         }
     }
 
+    std::cout << "Initializing segment controller" << std::endl;
+
     assert(this->num_segments != 0);
     // initialize the segment controller 
     segment_controller.disk = disk;
     segment_controller.data_offset = this->data_offset;
     segment_controller.segment_size = segment_size_chunks;
     segment_controller.num_segments = this->num_segments;
-    
+    segment_controller.free_segment_stat_offset = 13;
+    segment_controller.num_free_segments = data_slots[segment_controller.free_segment_stat_offset];
+
     //Attempt at per segment locking
     /*for(int i = 0; i < num_segments; i++) {
         segment_controller.single_segment_locks.emplace_back();
     }*/
-
-    //count free segments
-    segment_controller.num_free_segments = 0;
-    for(int i = 0; i < num_segments; i++) {
-        if(segment_controller.get_segment_usage(i) == 0) {
-            segment_controller.num_free_segments += 1;
-        }
-    }
 
     //prepare for writes!
     segment_controller.set_new_free_segment();
@@ -614,6 +583,8 @@ void SuperBlock::load_from_disk() {
             throw FileSystemException("disk bit map should hold every bit in superblock marked as 'in use' why is this not the case?");
         }
     }
+
+    std::cout << "EXITING LOAD FROM DISK" << std::endl;
 }
 
 void FileSystem::printForDebug() {

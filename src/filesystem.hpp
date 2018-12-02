@@ -34,6 +34,7 @@ struct SegmentController {
 	uint64_t current_segment;
 	uint64_t current_chunk;
 	uint64_t num_free_segments;
+	uint64_t free_segment_stat_offset;
 
 	uint64_t get_segment_usage(uint64_t segment_number) {
 		std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + segment_number * segment_size);
@@ -59,8 +60,10 @@ struct SegmentController {
 		for(int i = 0; i < num_segments; i++) {
 			std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + i * segment_size);
 			std::memset(chunk->data, 0, chunk->size_bytes);
+			//std::cout << "Zeroed " << i << " of " << num_segments << " segments" << std::endl;
 		}
 		num_free_segments = num_segments;
+		((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
 	}
 
 	//Find a new free segment
@@ -70,6 +73,7 @@ struct SegmentController {
 				current_segment = i;
 				current_chunk = 1;
 				num_free_segments -= 1;
+				((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
 				return;
 			}
 		}
@@ -154,6 +158,7 @@ struct SegmentController {
 
 		//update number of free segments
 		num_free_segments += segments_to_clean.size() - 1;
+		((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
 	}
 
 	uint64_t alloc_next(uint64_t inode_number) {
@@ -166,7 +171,7 @@ struct SegmentController {
 		}
 
 		//TODO: Try cleaning first?
-		clean();
+		//clean();
 
 		//throw exception if disk full
 		if(current_segment == -1) {
@@ -177,6 +182,7 @@ struct SegmentController {
 		uint64_t usage = get_segment_usage(current_segment);
 		if(usage == 0) {
 			num_free_segments -= 1;
+			((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
 		}
 		set_segment_usage(current_segment, get_segment_usage(current_segment) + 1);	
 
@@ -216,6 +222,7 @@ struct SegmentController {
 		set_segment_usage(segment_number, usage - 1);
 		if(usage - 1 == 0) {
 			num_free_segments += 1;
+			((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
 		}
 	}
 };
@@ -242,7 +249,7 @@ struct SuperBlock {
 	SegmentController segment_controller;
 	uint64_t segment_size_chunks = 0;
 	uint64_t num_segments = 0;
-
+	uint64_t num_free_segments = 0;
 
 	SuperBlock(Disk *disk);
 
