@@ -44,7 +44,7 @@ struct Chunk {
 template<typename K, typename V, size_t cache_size = 0>
 class SharedObjectCache {
 private:
-	size_t size_next_sweep = 16;
+	size_t size_next_sweep = 16 + cache_size * 2;
 	std::unordered_map<K, std::weak_ptr<V>> map;
 	std::shared_ptr<V> cache[cache_size];
 public:
@@ -56,9 +56,14 @@ public:
 		if (!force && map.size() < size_next_sweep)
 			return ;
 
-		for (size_t i = 0; i < cache_size; ++i) {
-			cache[i] = nullptr;
+		fprintf(stdout, "sweeping map, size: %d\n", map.size());
+
+		if (force) {
+			for (size_t i = 0; i < cache_size; ++i) {
+				cache[i] = nullptr;
+			}
 		}
+		
 
 		for (auto it = this->map.cbegin(); it != this->map.cend();){
 			if ((*it).second.expired()) {
@@ -68,11 +73,11 @@ public:
 			}
 		}
 
-		size_next_sweep = this->map.size() < 16 ? 16 : this->map.size();
+		size_next_sweep = this->map.size() * 2 < 16 ? 16 : this->map.size() * 2;
 	}
 
 	void put(const K& k, std::shared_ptr<V> v) {
-		map[k] = std::move(v);
+		map[k] = v;
 		this->sweep(false);
 		if (cache_size > 0) {
 			cache[rand() % cache_size] = v;
@@ -83,7 +88,7 @@ public:
 		auto ref = this->map.find(k);
 		if (ref != this->map.end()) {
 			if (std::shared_ptr<V> v = (*ref).second.lock()) {
-				return std::move(v);
+				return v;
 			}
 		} 
 
@@ -111,7 +116,7 @@ private:
 	Byte* data;
 
 	// a mutex which protects access to the disk
-	std::mutex lock;
+	std::recursive_mutex lock;
 
 	// a cache of chunks that are loaded in
 	SharedObjectCache<Size, Chunk, 0> chunk_cache;

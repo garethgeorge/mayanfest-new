@@ -10,7 +10,7 @@ Chunk::~Chunk() {
 }
 
 std::shared_ptr<Chunk> Disk::get_chunk(Size chunk_idx) {
-	std::lock_guard<std::mutex> g(lock); // acquire the lock
+	std::lock_guard<std::recursive_mutex> g(lock); // acquire the lock
 
 	if (chunk_idx > this->size_chunks()) {
 		throw DiskException("chunk index out of bounds");
@@ -36,7 +36,7 @@ std::shared_ptr<Chunk> Disk::get_chunk(Size chunk_idx) {
 }
 
 void Disk::flush_chunk(const Chunk& chunk) {
-	std::lock_guard<std::mutex> g(lock); // acquire the lock
+	std::lock_guard<std::recursive_mutex> g(lock); // acquire the lock
 
 	assert(chunk.size_bytes == this->chunk_size());
 	assert(chunk.parent == this);
@@ -49,19 +49,22 @@ void Disk::flush_chunk(const Chunk& chunk) {
 	size_t page_count = this->_chunk_size / this->_mempage_size;
 	if (this->_chunk_size % this->_mempage_size != 0) 
 		page_count++;
-	
+
 	if (this->fd != -1) {
 		int sync_retval = msync((void *)chunk_addr, page_count * this->_mempage_size, MS_ASYNC);
 		if (sync_retval != 0) {
-			char buff[1024];
-			sprintf(buff, "msync failed to synchronize the chunk segment with the disk, error code %d for chunk %d", sync_retval, chunk.chunk_idx);
-			throw DiskException(buff);
+			// char buff[1024];
+			// fprintf(stdout, "msync failed to synchronize the chunk segment with the disk, error code %d for chunk %d\n"
+			// 	"\tmessage: %s\n", sync_retval, chunk.chunk_idx, strerror(errno));
+			throw DiskException("failed to msync the chunk\n");
+		} else {
+			// fprintf(stdout, "msync successful\n");
 		}
 	}
 }
 
 void Disk::try_close() {
-	std::lock_guard<std::mutex> g(lock); // acquire the lock
+	std::lock_guard<std::recursive_mutex> g(lock); // acquire the lock
 	this->chunk_cache.sweep(true);
 	if (this->chunk_cache.size() > 0) {
 		throw DiskException("there are still chunks referenced in other parts of the program");
