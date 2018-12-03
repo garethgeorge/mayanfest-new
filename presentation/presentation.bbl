@@ -1,0 +1,119 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 2.9 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated as
+% required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+\datalist[entry]{nty/global//global/global}
+  \entry{accetta1986mach}{article}{}
+    \name{author}{7}{}{%
+      {{hash=AM}{%
+         family={Accetta},
+         familyi={A\bibinitperiod},
+         given={Mike},
+         giveni={M\bibinitperiod},
+      }}%
+      {{hash=BR}{%
+         family={Baron},
+         familyi={B\bibinitperiod},
+         given={Robert},
+         giveni={R\bibinitperiod},
+      }}%
+      {{hash=BW}{%
+         family={Bolosky},
+         familyi={B\bibinitperiod},
+         given={William},
+         giveni={W\bibinitperiod},
+      }}%
+      {{hash=GD}{%
+         family={Golub},
+         familyi={G\bibinitperiod},
+         given={David},
+         giveni={D\bibinitperiod},
+      }}%
+      {{hash=RR}{%
+         family={Rashid},
+         familyi={R\bibinitperiod},
+         given={Richard},
+         giveni={R\bibinitperiod},
+      }}%
+      {{hash=TA}{%
+         family={Tevanian},
+         familyi={T\bibinitperiod},
+         given={Avadis},
+         giveni={A\bibinitperiod},
+      }}%
+      {{hash=YM}{%
+         family={Young},
+         familyi={Y\bibinitperiod},
+         given={Michael},
+         giveni={M\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{AM+1}
+    \strng{fullhash}{AMBRBWGDRRTAYM1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{sortinit}{A}
+    \field{sortinithash}{A}
+    \field{title}{Mach: A new kernel foundation for UNIX development}
+    \field{year}{1986}
+  \endentry
+
+  \entry{mckusick1984fast}{article}{}
+    \name{author}{4}{}{%
+      {{hash=MMK}{%
+         family={McKusick},
+         familyi={M\bibinitperiod},
+         given={Marshall\bibnamedelima K},
+         giveni={M\bibinitperiod\bibinitdelim K\bibinitperiod},
+      }}%
+      {{hash=JWN}{%
+         family={Joy},
+         familyi={J\bibinitperiod},
+         given={William\bibnamedelima N},
+         giveni={W\bibinitperiod\bibinitdelim N\bibinitperiod},
+      }}%
+      {{hash=LSJ}{%
+         family={Leffler},
+         familyi={L\bibinitperiod},
+         given={Samuel\bibnamedelima J},
+         giveni={S\bibinitperiod\bibinitdelim J\bibinitperiod},
+      }}%
+      {{hash=FRS}{%
+         family={Fabry},
+         familyi={F\bibinitperiod},
+         given={Robert\bibnamedelima S},
+         giveni={R\bibinitperiod\bibinitdelim S\bibinitperiod},
+      }}%
+    }
+    \list{publisher}{1}{%
+      {ACM}%
+    }
+    \strng{namehash}{MMK+1}
+    \strng{fullhash}{MMKJWNLSJFRS1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{sortinit}{M}
+    \field{sortinithash}{M}
+    \field{number}{3}
+    \field{pages}{181\bibrangedash 197}
+    \field{title}{A fast file system for UNIX}
+    \field{volume}{2}
+    \field{journaltitle}{ACM Transactions on Computer Systems (TOCS)}
+    \field{year}{1984}
+  \endentry
+\enddatalist
+\endinput

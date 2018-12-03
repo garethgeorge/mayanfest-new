@@ -14,5 +14,5 @@ while numbytes <= maxnumbytes:
     fd = os.open(os.path.join(mountpoint, filename), os.O_WRONLY)
     os.write(fd, 'a' * numbytes)
     os.close(fd)
-    print(time.time() - starttime)
+    print("%8d,%.16f" % (numbytes, time.time() - starttime))
     numbytes *= 2

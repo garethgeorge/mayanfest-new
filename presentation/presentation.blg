@@ -1,0 +1,64 @@
+This is BibTeX, Version 0.99d (TeX Live 2017/Debian)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: presentation.aux
+The style file: biblatex.bst
+Reallocated glb_str_ptr (elt_size=4) to 20 items from 10.
+Reallocated global_strs (elt_size=20001) to 20 items from 10.
+Reallocated glb_str_end (elt_size=4) to 20 items from 10.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: presentation-blx.bib
+Database file #2: presentation.bib
+Biblatex version: 3.8
+Reallocated wiz_functions (elt_size=4) to 9000 items from 6000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+You've used 3 entries,
+            6268 wiz_defined-function locations,
+            1188 strings with 8955 characters,
+and the built_in function-call counts, 19071 in all, are:
+= -- 1487
+> -- 284
+< -- 53
++ -- 563
+- -- 115
+* -- 1440
+:= -- 2365
+add.period$ -- 0
+call.type$ -- 3
+change.case$ -- 23
+chr.to.int$ -- 30
+cite$ -- 4
+duplicate$ -- 1922
+empty$ -- 1660
+format.name$ -- 194
+if$ -- 3740
+int.to.chr$ -- 0
+int.to.str$ -- 5
+missing$ -- 0
+newline$ -- 119
+num.names$ -- 88
+pop$ -- 806
+preamble$ -- 1
+purify$ -- 45
+quote$ -- 0
+skip$ -- 393
+stack$ -- 0
+substring$ -- 2776
+swap$ -- 373
+text.length$ -- 72
+text.prefix$ -- 2
+top$ -- 1
+type$ -- 90
+warning$ -- 0
+while$ -- 300
+width$ -- 0
+write$ -- 117
