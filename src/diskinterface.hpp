@@ -56,7 +56,7 @@ public:
 		if (!force && map.size() < size_next_sweep)
 			return ;
 
-		fprintf(stdout, "sweeping map, size: %d\n", map.size());
+		// fprintf(stdout, "sweeping map, size: %d\n", map.size());
 
 		if (force) {
 			for (size_t i = 0; i < cache_size; ++i) {

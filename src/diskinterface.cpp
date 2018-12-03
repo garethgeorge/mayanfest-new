@@ -7,6 +7,9 @@ Chunk::~Chunk() {
 	// whenever the last reference to a chunk is released, we flush the chunk
 	// out to the disk 
 	this->parent->flush_chunk(*this);
+
+	assert(this->data != nullptr);
+	free(this->data);
 }
 
 std::shared_ptr<Chunk> Disk::get_chunk(Size chunk_idx) {
@@ -25,10 +28,11 @@ std::shared_ptr<Chunk> Disk::get_chunk(Size chunk_idx) {
 	chunk->parent = this; 
 	chunk->size_bytes = this->chunk_size();
 	chunk->chunk_idx = chunk_idx;
-	chunk->data = this->data + chunk_idx * this->chunk_size();
-	// chunk->data = std::unique_ptr<Byte[]>(new Byte[this->chunk_size()]);
-	// std::memcpy(chunk->data.get(), this->data + chunk_idx * this->chunk_size(), 
-	// 	this->chunk_size());
+
+	// chunk->data = this->data + chunk_idx * this->chunk_size();
+	chunk->data = new Byte[this->chunk_size() * 2];
+	std::memcpy(chunk->data, this->data + chunk_idx * this->chunk_size(), 
+		this->chunk_size());
 
 	// store it into the chunk cache so that it can be shared if requested again
 	this->chunk_cache.put(chunk_idx, chunk); 
@@ -41,8 +45,9 @@ void Disk::flush_chunk(const Chunk& chunk) {
 	assert(chunk.size_bytes == this->chunk_size());
 	assert(chunk.parent == this);
 
-	// std::memcpy(this->data + chunk.chunk_idx * this->chunk_size(), 
-	// 	chunk.data.get(), this->chunk_size());
+	std::memcpy(this->data + chunk.chunk_idx * this->chunk_size(), 
+		chunk.data, this->chunk_size());
+
 	size_t chunk_addr = (size_t)chunk.data;
 	chunk_addr &= ~(this->_mempage_size - 1);
 
