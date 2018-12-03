@@ -134,7 +134,7 @@ private:
 	std::recursive_mutex lock;
 
 	// a cache of chunks that are loaded in
-	SharedObjectCache<Size, Chunk, 0> chunk_cache;
+	SharedObjectCache<Size, Chunk, 64> chunk_cache;
 
 	// loops over weak pointers, if any of them are expired, it deletes 
 	// the entries from the unordered map 
