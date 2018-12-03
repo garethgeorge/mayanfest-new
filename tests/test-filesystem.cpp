@@ -380,10 +380,11 @@ TEST_CASE("INodes can be used to store and read directories", "[filesystem][idir
 		directory.add_file("hello_world", *inode_file);
 		directory.flush();
 
-		std::unique_ptr<IDirectory::DirEntry> entry = directory.next_entry(nullptr);
+		auto entries = directory.get_files();
+		std::unique_ptr<IDirectory::DirEntry> &entry = entries[0];
 		REQUIRE(entry != nullptr);
-		REQUIRE(entry->data.inode_idx == inode_file->inode_table_idx);
-		REQUIRE(strcmp(entry->filename, "hello_world") == 0);
+		REQUIRE(entry->inode_idx == inode_file->inode_table_idx);
+		REQUIRE(strcmp(entry->filename.c_str(), "hello_world") == 0);
 	}
 
 	SECTION("Can write TWO files to a directory AND get them back") {
@@ -399,13 +400,14 @@ TEST_CASE("INodes can be used to store and read directories", "[filesystem][idir
 		directory.add_file("hello_world2", *inode_file2);
 		directory.flush();
 
-		std::unique_ptr<IDirectory::DirEntry> entry = directory.next_entry(nullptr);
-		REQUIRE(entry->data.inode_idx == inode_file->inode_table_idx);
-		REQUIRE(strcmp(entry->filename, "hello_world") == 0);
+		auto entries = directory.get_files();
+		std::unique_ptr<IDirectory::DirEntry>& entry = entries[0];
+		REQUIRE(entry->inode_idx == inode_file->inode_table_idx);
+		REQUIRE(strcmp(entry->filename.c_str(), "hello_world") == 0);
 
-		std::unique_ptr<IDirectory::DirEntry> entry2 = directory.next_entry(entry);
-		REQUIRE(entry2->data.inode_idx == inode_file2->inode_table_idx);
-		REQUIRE(strcmp(entry2->filename, "hello_world2") == 0);
+		std::unique_ptr<IDirectory::DirEntry>& entry2 = entries[1];
+		REQUIRE(entry2->inode_idx == inode_file2->inode_table_idx);
+		REQUIRE(strcmp(entry2->filename.c_str(), "hello_world2") == 0);
 	}
 
 	SECTION("Can write TWO files to a directory AND get them back BY NAME and then remove them both") {
@@ -421,12 +423,12 @@ TEST_CASE("INodes can be used to store and read directories", "[filesystem][idir
 		directory.add_file("hello_world2", *inode_file2);
 
 		std::unique_ptr<IDirectory::DirEntry> entry = directory.get_file("hello_world");
-		REQUIRE(entry->data.inode_idx == inode_file->inode_table_idx);
-		REQUIRE(strcmp(entry->filename, "hello_world") == 0);
+		REQUIRE(entry->inode_idx == inode_file->inode_table_idx);
+		REQUIRE(strcmp(entry->filename.c_str(), "hello_world") == 0);
 
 		std::unique_ptr<IDirectory::DirEntry> entry2 = directory.get_file("hello_world2");
-		REQUIRE(entry2->data.inode_idx == inode_file2->inode_table_idx);
-		REQUIRE(strcmp(entry2->filename, "hello_world2") == 0);
+		REQUIRE(entry2->inode_idx == inode_file2->inode_table_idx);
+		REQUIRE(strcmp(entry2->filename.c_str(), "hello_world2") == 0);
 
 		// TEST REMOVING A FILE
 		REQUIRE(directory.remove_file("hello_world") != nullptr);
@@ -458,9 +460,9 @@ TEST_CASE("INodes can be used to store and read directories", "[filesystem][idir
 
 		// step 1: confirm that the number of directories matches the # we would expect
 		{
-			std::unique_ptr<IDirectory::DirEntry> entry = nullptr;
+			auto entries = directory.get_files();
 			size_t count = 0;
-			while (entry = directory.next_entry(entry)) {
+			for (auto &entry : entries) {
 				count++;
 			}
 
@@ -479,19 +481,19 @@ TEST_CASE("INodes can be used to store and read directories", "[filesystem][idir
 
 			// read the file contents
 			auto direntry = directory.get_file(file_name);
-			auto file_inode = fs->superblock->inode_table->get_inode(direntry->data.inode_idx);
+			auto file_inode = fs->superblock->inode_table->get_inode(direntry->inode_idx);
 			file_inode->read(0, file_contents, file_inode->data.file_size);
 
 			REQUIRE(strcmp(file_contents_expected, file_contents) == 0);
 
-			REQUIRE(directory.remove_file(file_name)->data.inode_idx == direntry->data.inode_idx);
+			REQUIRE(directory.remove_file(file_name)->inode_idx == direntry->inode_idx);
 		}
 		
 		// step 2: confirm that the number of directories matches the # we would expect (0 b/c we removed them all)
 		{
-			std::unique_ptr<IDirectory::DirEntry> entry = nullptr;
+			auto entries = directory.get_files();
 			size_t count = 0;
-			while (entry = directory.next_entry(entry)) {
+			for (auto &entry : entries) {
 				count++;
 			}
 

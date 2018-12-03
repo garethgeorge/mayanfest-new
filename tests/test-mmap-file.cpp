@@ -14,7 +14,9 @@ TEST_CASE( "Should be able to construct a filesystem in a memory mapped file", "
 	constexpr uint64_t CHUNK_COUNT = 4096;
 	constexpr uint64_t CHUNK_SIZE = 4096;
 	{
-		int fh = open("disk.myanfest", O_RDWR | O_CREAT, 0666);
+		int fh = open("disk.myanfest", O_RDWR | O_CREAT);
+		std::cout << "THE FILE HANDLE IS: " << fh << std::endl;
+
 		lseek(fh, CHUNK_COUNT * CHUNK_SIZE - 1, SEEK_SET);
 		const char *empty = "";
 		write(fh, empty, 1);
@@ -43,7 +45,9 @@ TEST_CASE("INodes can be used to store and read directories on a mmap'd disk", "
 	constexpr uint64_t CHUNK_COUNT = 4096;
 	constexpr uint64_t CHUNK_SIZE = 4096;
 
+	unlink("disk.myanfest");
 	int fh = open("disk.myanfest", O_RDWR | O_CREAT);
+	std::cout << "FILE HANDLE: " << fh << std::endl;
 	lseek(fh, CHUNK_COUNT * CHUNK_SIZE - 1, SEEK_SET);
 	const char *empty = "";
 	write(fh, empty, 1);
@@ -73,9 +77,9 @@ TEST_CASE("INodes can be used to store and read directories on a mmap'd disk", "
 
 		// step 1: confirm that the number of directories matches the # we would expect
 		{
-			std::unique_ptr<IDirectory::DirEntry> entry = nullptr;
+			auto entries = directory.get_files();
 			size_t count = 0;
-			while (entry = directory.next_entry(entry)) {
+			for (auto &entry : entries) {
 				count++;
 			}
 
@@ -101,23 +105,19 @@ TEST_CASE("INodes can be used to store and read directories on a mmap'd disk", "
 
 			// read the file contents
 			auto direntry = directory.get_file(file_name);
-			auto file_inode = fs->superblock->inode_table->get_inode(direntry->data.inode_idx);
+			auto file_inode = fs->superblock->inode_table->get_inode(direntry->inode_idx);
 			file_inode->read(0, file_contents, file_inode->data.file_size);
 
 			REQUIRE(strcmp(file_contents_expected, file_contents) == 0);
 
-			REQUIRE(directory.remove_file(file_name)->data.inode_idx == direntry->data.inode_idx);
+			REQUIRE(directory.remove_file(file_name)->inode_idx == direntry->inode_idx);
 		}
 		
 		// step 2: confirm that the number of directories matches the # we would expect (0 b/c we removed them all)
 		{
-			std::unique_ptr<IDirectory::DirEntry> entry = nullptr;
-			size_t count = 0;
-			while (entry = directory.next_entry(entry)) {
-				count++;
-			}
+			auto entries = directory.get_files();
 
-			REQUIRE(count == 0);
+			REQUIRE(entries.size() == 0);
 		}
 	}
 }

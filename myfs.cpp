@@ -111,7 +111,7 @@ std::shared_ptr<INode> resolve_path(const char *path) {
 			throw UnixError(ENOENT);
 		}
 
-		inode = superblock->inode_table->get_inode(entry->data.inode_idx);
+		inode = superblock->inode_table->get_inode(entry->inode_idx);
 		// if (!can_read_inode(ctx, *inode)) {
 		// 	// this code might as well check that we have access to the path
 		// 	fprintf(stdout, "resolve_path found that access is denied to this directory\n");
@@ -125,7 +125,7 @@ std::shared_ptr<INode> resolve_path(const char *path) {
 	if (entry == nullptr)
 		throw UnixError(ENOENT);
 
-	return superblock->inode_table->get_inode(entry->data.inode_idx);
+	return superblock->inode_table->get_inode(entry->inode_idx);
 }
 
 static int myfs_getattr(const char *path, struct stat *stbuf)
@@ -178,9 +178,9 @@ static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		}
 
 		IDirectory dir(*dir_inode);
-		std::unique_ptr<IDirectory::DirEntry> entry = nullptr;
-		while(entry = dir.next_entry(entry)) {
-			if (filler(buf, entry->filename, NULL, 0) != 0)
+		std::vector<std::unique_ptr<IDirectory::DirEntry> > entries = dir.get_files();
+		for (auto &entry : entries) {
+			if (filler(buf, entry->filename.c_str(), NULL, 0) != 0)
 				return -ENOMEM;
 		}
 
@@ -508,8 +508,9 @@ static int myfs_rmdir(const char *path) {
 		// check that the directory is empty
 		std::unique_ptr<IDirectory::DirEntry> entry = nullptr;
 		IDirectory child_dir(*file_inode);
-		while (entry = child_dir.next_entry(entry)) {
-			if (strcmp(entry->filename, ".") != 0 && strcmp(entry->filename, "..") != 0) {
+		std::vector<std::unique_ptr<IDirectory::DirEntry> > entries = child_dir.get_files();
+		for (auto &entry : entries) {
+			if (strcmp(entry->filename.c_str(), ".") != 0 && strcmp(entry->filename.c_str(), "..") != 0) {
 				throw UnixError(ENOTEMPTY);
 			}
 		}

@@ -405,49 +405,16 @@ struct INode {
 	TODO: implement cleaning of a directory
 */
 struct IDirectory {
-private:
-	struct DirHeader {
-		uint64_t record_count = 0;
-		uint64_t deleted_record_count = 0;
-
-		uint64_t dir_entries_tail = 0;
-		uint64_t dir_entries_head = 0;
-	};
-
-	DirHeader header;
 	INode* inode;
 public:
-
 	struct DirEntry {
-		struct DirEntryData {
-			uint64_t next_entry_ptr = 0;
-			uint64_t filename_length = 0;
-			uint64_t inode_idx = 0;
-		};
-
-		DirEntry(INode *inode) : inode(inode) { };
-
-		uint64_t offset = 0;
-		INode* inode;
-		DirEntryData data;
-		char *filename = nullptr;
-
-		~DirEntry() {
-			if (filename != nullptr) {
-				free(filename);
-			}
-		}
-
-		// returns the size of the thing it read
-		uint64_t read_from_disk(size_t offset);
-
-		// only pass filename if you want to update it
-		uint64_t write_to_disk(size_t offset, const char *filename);
+		std::string filename;
+		uint64_t inode_idx = 0;
 	};
 
 	IDirectory(INode &inode);
 
-	void flush();
+	void flush() {};
 
 	void initializeEmpty();
 
@@ -457,8 +424,7 @@ public:
 
 	std::unique_ptr<DirEntry> remove_file(const char *filename);
 
-	std::unique_ptr<DirEntry> next_entry(const std::unique_ptr<DirEntry>& entry);
+	std::vector<std::unique_ptr<DirEntry>> get_files();
 };
-
 
 #endif
