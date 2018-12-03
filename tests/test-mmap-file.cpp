@@ -15,7 +15,9 @@ TEST_CASE( "Should be able to construct a filesystem in a memory mapped file", "
 	constexpr uint64_t CHUNK_SIZE = 4096;
 	{
 		int fh = open("disk.myanfest", O_RDWR | O_CREAT, 0666);
-		truncate("disk.myanfest", CHUNK_COUNT * CHUNK_SIZE);
+		lseek(fh, CHUNK_COUNT * CHUNK_SIZE - 1, SEEK_SET);
+		const char *empty = "";
+		write(fh, empty, 1);
 
 		std::unique_ptr<Disk> disk(new Disk(CHUNK_COUNT, CHUNK_SIZE, MAP_FILE | MAP_SHARED, fh));
 		std::unique_ptr<FileSystem> fs(new FileSystem(disk.get()));
@@ -41,8 +43,10 @@ TEST_CASE("INodes can be used to store and read directories on a mmap'd disk", "
 	constexpr uint64_t CHUNK_COUNT = 4096;
 	constexpr uint64_t CHUNK_SIZE = 4096;
 
-	truncate("disk.myanfest", CHUNK_COUNT * CHUNK_SIZE);
 	int fh = open("disk.myanfest", O_RDWR | O_CREAT);
+	lseek(fh, CHUNK_COUNT * CHUNK_SIZE - 1, SEEK_SET);
+	const char *empty = "";
+	write(fh, empty, 1);
 
 	SECTION("can write a thousand files, each of which contains a single number base 10 encoded") {
 		

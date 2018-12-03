@@ -98,10 +98,9 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
         {
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
-            std::cout << "bytes to write: " << bytes_write_first_chunk << " chunk size: " << chunk_size << std::endl;
             assert(bytes_write_first_chunk <= chunk_size);
             assert(starting_offset % chunk_size + bytes_write_first_chunk <= chunk_size);
-            std::memcpy(chunk->data + (starting_offset % chunk_size), buf, bytes_write_first_chunk);
+            chunk->memcpy(chunk->data + (starting_offset % chunk_size), buf, bytes_write_first_chunk);
             buf += bytes_write_first_chunk;
             n -= bytes_write_first_chunk;
         }
@@ -121,7 +120,7 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
         while (n > chunk_size) {
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
-            std::memcpy(chunk->data, buf, chunk_size);
+            chunk->memcpy(chunk->data, buf, chunk_size);
             buf += chunk_size;
             n -= chunk_size;
             starting_offset += chunk_size;
@@ -131,7 +130,7 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
             assert(n <= chunk_size);
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
-            std::memcpy(chunk->data, buf, n);
+            chunk->memcpy(chunk->data, buf, n);
         }
     } catch (const FileSystemException& e) {
         // make sure the filesize at the end is correct no matter what happens
@@ -278,9 +277,9 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
 #endif
                 if (next_chunk_loc != 0) {
                     std::shared_ptr<Chunk> oldChunk = this->superblock->disk->get_chunk(next_chunk_loc);
-                    std::memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes);
+                    newChunk->memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes, oldChunk);
                 } else {
-                    std::memset((void *)newChunk->data, 0, newChunk->size_bytes);
+                    newChunk->memset((void *)newChunk->data, 0, newChunk->size_bytes);
                 }
                 indirect_table[indirect_table_idx] = newChunk->chunk_idx;
                 next_chunk_loc = newChunk->chunk_idx;
@@ -321,9 +320,9 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
                     std::shared_ptr<Chunk> newChunk = this->superblock->allocate_chunk(this->inode_table_idx);
                     if (next_chunk_loc != 0) {
                         std::shared_ptr<Chunk> oldChunk = this->superblock->disk->get_chunk(next_chunk_loc);
-                        std::memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes);
+                        newChunk->memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes, oldChunk);
                     } else {
-                        std::memset((void *)newChunk->data, 0, newChunk->size_bytes);
+                        newChunk->memset((void *)newChunk->data, 0, newChunk->size_bytes);
                     }
                     next_chunk_loc = newChunk->chunk_idx;
                     lookup_table[chunk_number / indirect_address_count] = newChunk->chunk_idx;
@@ -496,7 +495,10 @@ void INodeTable::update_inode(const INode& inode) {
     uint64_t chunk_idx = inode_ilist_offset + inode.inode_table_idx / inodes_per_chunk;
     uint64_t chunk_offset = inode.inode_table_idx % inodes_per_chunk;
     std::shared_ptr<Chunk> chunk = superblock->disk->get_chunk(chunk_idx);
-    std::memcpy((void *)(chunk->data + sizeof(INode::INodeData) * chunk_offset), (void *)(&(inode.data)), sizeof(INode::INodeData));
+
+    assert((Byte *)(chunk->data + sizeof(INode::INodeData) * chunk_offset + sizeof(INode::INodeData)) < chunk->data + chunk->size_bytes);
+
+    chunk->memcpy((void *)(chunk->data + sizeof(INode::INodeData) * chunk_offset), (void *)(&(inode.data)), sizeof(INode::INodeData));
 }
 
 void INodeTable::free_inode(std::shared_ptr<INode> inode) {

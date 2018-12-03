@@ -63,7 +63,8 @@ struct SegmentController {
 			//std::cout << "Zeroed " << i << " of " << num_segments << " segments" << std::endl;
 		}
 		num_free_segments = num_segments;
-		((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
+		std::shared_ptr<Chunk> chunk = disk->get_chunk(0);
+		((uint64_t*)chunk->data)[free_segment_stat_offset] = num_free_segments;
 	}
 
 	//Find a new free segment
@@ -73,7 +74,8 @@ struct SegmentController {
 				current_segment = i;
 				current_chunk = 1;
 				num_free_segments -= 1;
-				((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
+				std::shared_ptr<Chunk> chunk = disk->get_chunk(0);
+				((uint64_t*)chunk->data)[free_segment_stat_offset] = num_free_segments;
 				return;
 			}
 		}
@@ -142,7 +144,7 @@ struct SegmentController {
 					set_segment_chunk_to_inode(new_segment, write_head, inode_num);
 					std::shared_ptr<Chunk> to_read = disk->get_chunk(data_offset + sn * segment_size + cn);
 					std::shared_ptr<Chunk> to_write = disk->get_chunk(data_offset + new_segment * segment_size + write_head);
-					memcpy((void*)to_write->data, (void*)to_read->data, to_read->size_bytes);
+					to_write->memcpy((void*)to_write->data, (void*)to_read->data, to_read->size_bytes);
 					write_head += 1;
 				}
 			}
@@ -153,7 +155,7 @@ struct SegmentController {
 		//remove the old data
 		for(uint64_t sn : segments_to_clean) {
 			std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + sn * segment_size);
-			std::memset(chunk->data, 0, chunk->size_bytes);
+			chunk->memset(chunk->data, 0, chunk->size_bytes);
 		}
 
 		//update number of free segments
@@ -262,7 +264,7 @@ struct SuperBlock {
 		std::shared_ptr<Chunk> chunk = this->disk->get_chunk(chunk_index);
 		
 		// zero the newly allocated chunk before we return it
-		std::memset(chunk->data, 0, this->disk_chunk_size); 
+		chunk->memset(chunk->data, 0, this->disk_chunk_size); 
 
 		return std::move(chunk);
 	}

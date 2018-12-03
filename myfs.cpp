@@ -262,6 +262,8 @@ static int myfs_mknod(const char *path, mode_t mode, dev_t rdev) {
 		// TODO: add code to release all chunks owned by the inode first
 		superblock->inode_table->free_inode(std::move(new_inode));
 		return -e.errorcode;
+	} catch (const FileSystemException &e) {
+		return -EDQUOT;
 	}
 	
 	return 0;
