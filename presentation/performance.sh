@@ -2,15 +2,17 @@
 mountpoint="../build/mount/"
 filename="hello"
 filename="$mountpoint$filename"
-maxnumbytes=33554432 #32*1024*1024
+maxnumbytes=$((32*1024*1024))
 numbytes=1024
 
 rm stats
 
+a="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+./run.sh &
 while [ $numbytes -le $maxnumbytes ]
 do
 	#mount
-	./run.sh &
 	while true
 	do
 		if [ `stat -c%d "$mountpoint"` != `stat -c%d "$mountpoint/.."` ]; then
@@ -18,24 +20,27 @@ do
 		fi
 	done
 	echo "done mounting"
-
 	touch $filename
+
+	#run test
 	starttime=`date +%s%N` #nanoseconds
-	for ((i=1; i<=$numbytes; i=i+1))
-	do
-		echo 'a' >> $filename
-	done
+	python2 writestuff.py $filename $numbytes >> stats.txt  
 	endtime=`date +%s%N` #nanoseconds
+
+	#find stats
 	runtime=$((endtime-starttime))
-	throughput=`echo "scale=6; ($numbytes * 2) / ($runtime / 1000000000) " | bc -l`
+	throughput=`echo "scale=6; $numbytes / ($runtime / 1000000000) " | bc -l`
 
-	echo $throughput >> stats
+	#log stats
+	echo "$numbytes,$throughput" >> stats
 
+	#loop control
+	a=$a$a
 	numbytes=$((numbytes*2))
 
-	$unmount
-	umount $mountpoint
+	#unmount
 done
+sudo umount $mountpoint
 
 
 
