@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2018.10.21)  2 DEC 2018 00:25
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2018.10.21)  2 DEC 2018 20:50
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -924,67 +924,116 @@ duction.tex (./presentation.toc)
 
 ] [10
 
-]
-LaTeX Font Info:    Try loading font information for U+msa on input line 29.
-
-(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
-File: umsa.fd 2013/01/14 v3.01 AMS symbols A
-)
-LaTeX Font Info:    Try loading font information for U+msb on input line 29.
-
-(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
-File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)
-LaTeX Font Info:    Try loading font information for OT1+mathkerncmss on input 
-line 29.
-
-(/usr/share/texlive/texmf-dist/tex/latex/sansmathaccent/ot1mathkerncmss.fd
-File: ot1mathkerncmss.fd 2013/03/27 Fontinst v1.933 font definitions for OT1/ma
-thkerncmss.
-)
-[11
+] [11
 
 ] [12
 
 ] [13
 
-]) (./architecture.tex (./presentation.toc) [14
+] [14
 
 ] [15
 
-])
-(./beyond-basics.tex (./presentation.toc) [16
+] [16
 
-] [17
+]
+LaTeX Font Info:    Try loading font information for U+msa on input line 45.
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Try loading font information for U+msb on input line 45.
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+LaTeX Font Info:    Try loading font information for OT1+mathkerncmss on input 
+line 45.
+
+(/usr/share/texlive/texmf-dist/tex/latex/sansmathaccent/ot1mathkerncmss.fd
+File: ot1mathkerncmss.fd 2013/03/27 Fontinst v1.933 font definitions for OT1/ma
+thkerncmss.
+)
+[17
 
 ] [18
 
 ] [19
 
-])
-(./challenges.tex (./presentation.toc) [20
+]) (./architecture.tex (./presentation.toc) [20
 
 ] [21
 
 ] [22
 
-] [23
+]
+[23
 
 ] [24
 
 ] [25
 
-])
-(./performance-benchmark.tex (./presentation.toc) [26
+] [26
 
 ] [27
 
-]) (./conclusion.tex
-(./presentation.toc) [28
+] [28
 
 ] [29
 
-]) (./questions.tex (./presentation.toc) [30
+]) (./beyond-basics.tex (./presentation.toc)
+[30
+
+] [31
+
+] [32
+
+] [33
+
+] [34
+
+] [35
+
+] [36
+
+] [37
+
+] [38
+
+] [39
+
+] [40
+
+] [41
+
+] [42
+
+] [43
+
+])
+(./challenges.tex (./presentation.toc) [44
+
+] [45
+
+] [46
+
+] [47
+
+] [48
+
+] [49
+
+])
+(./performance-benchmark.tex (./presentation.toc) [50
+
+] [51
+
+]) (./conclusion.tex
+(./presentation.toc) [52
+
+] [53
+
+]) (./questions.tex (./presentation.toc) [54
 
 ]
 
@@ -995,7 +1044,7 @@ LaTeX Font Warning: Font shape `OT1/cmss/m/n' in size <20> not available
 LaTeX Font Warning: Font shape `OT1/cmss/bx/n' in size <20> not available
 (Font)              size <20.74> substituted on input line 8.
 
-[31
+[55
 
 ])
 \tf@nav=\write6
@@ -1021,22 +1070,24 @@ LaTeX Font Warning: Size substitutions with differences
 
  ) 
 Here is how much of TeX's memory you used:
- 20116 strings out of 492982
- 396791 string characters out of 6134895
- 461101 words of memory out of 5000000
- 23137 multiletter control sequences out of 15000+600000
- 11295 words of font info for 41 fonts, out of 8000000 for 9000
+ 20217 strings out of 492982
+ 398590 string characters out of 6134895
+ 463212 words of memory out of 5000000
+ 23186 multiletter control sequences out of 15000+600000
+ 15449 words of font info for 56 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 56i,15n,67p,779b,700s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 56i,15n,67p,779b,801s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/share/texli
-ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmssbx10.pfb></usr/share/texlive/t
-exmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on presentation.pdf (31 pages, 135120 bytes).
+ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></usr/share/texlive/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmssbx10.pfb></usr/share/texlive/texmf-di
+st/fonts/type1/public/amsfonts/cm/cmssi12.pfb></usr/share/texlive/texmf-dist/fo
+nts/type1/public/amsfonts/cm/cmsy10.pfb>
+Output written on presentation.pdf (55 pages, 211104 bytes).
 PDF statistics:
- 975 PDF objects out of 1000 (max. 8388607)
- 908 compressed objects within 10 object streams
- 70 named destinations out of 1000 (max. 500000)
+ 1629 PDF objects out of 1728 (max. 8388607)
+ 1530 compressed objects within 16 object streams
+ 118 named destinations out of 1000 (max. 500000)
  164 words of extra memory for PDF output out of 10000 (max. 10000000)
 

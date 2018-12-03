@@ -1,11 +1,27 @@
 \section{Beyond Basics}
 
 \begin{frame}
-\frametitle{Beyond Basics}
-\begin{itemize}[<+->]
-	\setlength\itemsep{1em}
-	\item Structure of segments for LFS
-	\item Superblock data structure list
-	\item Structure of inodes
-\end{itemize}
+	\frametitle{Beyond Basics}
+	\begin{itemize}[<+->]
+		\setlength\itemsep{1em}
+		\item Segment controller
+			\begin{itemize}
+				\item heavy lifting data structure
+				\item manages a pool of segments 
+				\item tracks segment utilization for efficient GC
+			\end{itemize}
+		\item Segment
+			\begin{itemize}
+				\item each segment maps its data blocks to the inodes that own them 
+				\item keeps a write head that allows for constant time chunk allocation
+				\item finding and garbage collecting low utilization chunks can be costly, however
+			\end{itemize}
+		\item Experiences with LFS
+			\begin{itemize}
+				\pro LFS dramatically decreased time to allocate chunks
+			  \pro Faster sequential writes due to constant time chunk allocation
+				\con Slower updates due to poor utilization of page cache when doing copy on write for updates
+				\con Introduces costly GC operation
+			\end{itemize}
+	\end{itemize}
 \end{frame}

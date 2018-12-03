@@ -517,8 +517,8 @@ class IntegrationTest(unittest.TestCase):
         for x in range(counter):
             letter = random.choice(letters)
             os.write(fd1, letter)
-            if x == (counter / 2):
-                os.mkdir(testDirName)
+            if x % 4096 == 0:
+                os.mkdir(os.path.join(self.testPoint, '{0}-{1}'.format(dirName, x)))
             #if x == (counter / 2) + 1:
             #    os.rmdir(testDirName)
             os.write(fd2, letter)
@@ -531,8 +531,8 @@ class IntegrationTest(unittest.TestCase):
         for x in range(counter):
             letter = random.choice(letters)
             os.write(fd1, letter)
-            if x == (counter / 2):
-                os.mkdir(mountDirName)
+            if x % 4096 == 0:
+                os.mkdir(os.path.join(self.mountPoint, '{0}-{1}'.format(dirName, x)))
             #if x == (counter / 2) + 1:
             #    os.rmdir(mountDirName)
             os.write(fd2, letter)

@@ -1,4 +1,24 @@
 \section{Architecture}
 \begin{frame}
-\frametitle{Architecture}
+	\frametitle{Architecture: Hybrid Log Structured File System (LFS)}
+	\begin{itemize}[<+->]
+		\setlength\itemsep{1em}
+		\item Superblock
+			\begin{itemize}
+				\item holds references to all other file system data structures
+				\item initializes 
+					\begin{itemize}
+						\item the inode table 
+						\item the segment controller
+					\end{itemize}
+			\end{itemize}
+		\item Inodes
+			\begin{itemize}
+				\item closely resembles inodes from ``A Fast File System for UNIX''
+				\item each inode contains 8 direct, 1 indirect, 1 double indirect, and 1 triple indirect blocks
+				\item additionally complicated by the need for an algorithm that allows moving both data blocks and indirect pages belonging to an inode
+			\end{itemize}
+	\end{itemize}
 \end{frame}
+
+

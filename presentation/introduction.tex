@@ -1,21 +1,37 @@
 \section{Introduction}
 
 \begin{frame}
-\frametitle{Introduction}
-	Design goals:\\[0.5em]
+\frametitle{Introduction: Design Goals}
 	\begin{itemize}[<+->]
 	\setlength\itemsep{1em}
-	\item High reliability
-	\item Simplicity
-	\item Memory mapped files
+	\item Iterative approach to development
+	\item Encapsulation
+	\item Testable
 		\begin{itemize}
-			\item performance gain at the cost of reliability
-			\item acceptable for high performance system
-			\item can be seen in Mach
+			\item object-oriented design
+			\item unit test for each object
+			\item integration test
 		\end{itemize}
-	\item General data structures
-	\item Log structured file system (LFS)
 \end{itemize}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Introduction: Design Goals \continued}
+	\begin{itemize}[<+->]
+		\setlength\itemsep{1em}
+		\item General data structures
+			\begin{itemize}
+				\item superblock
+				\item inode table
+				\item segment manager (LFS)
+			\end{itemize}
+		\item Memory mapped files
+			\begin{itemize}
+				\item performance gain at the cost of reliability
+				\item acceptable for high performance system
+				\item can be seen in Mach
+			\end{itemize}
+	\end{itemize}
 \end{frame}
 
 \begin{frame}
