@@ -24,10 +24,13 @@ struct FileSystemException : public StorageException {
 	FileSystemException(const std::string &message) : StorageException(message) { };
 };
 
+struct SuperBlock;
+
 struct SegmentController {
 	std::mutex segment_controller_lock;
 	//std::vector<std::mutex> single_segment_locks;
 	Disk* disk;
+	SuperBlock * superblock;
 	uint64_t data_offset;
 	uint64_t segment_size;
 	uint64_t num_segments;
@@ -36,197 +39,25 @@ struct SegmentController {
 	uint64_t num_free_segments;
 	uint64_t free_segment_stat_offset;
 
-	uint64_t get_segment_usage(uint64_t segment_number) {
-		std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + segment_number * segment_size);
-		return *((uint64_t*)chunk->data);
-	}
+	uint64_t get_segment_usage(uint64_t segment_number);
 
-	void set_segment_usage(uint64_t segment_number, uint64_t segment_usage) {
-		std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + segment_number * segment_size);
-		*((uint64_t*)chunk->data) = segment_usage;
-	}
+	void set_segment_usage(uint64_t segment_number, uint64_t segment_usage);
 
-	uint64_t get_segment_chunk_to_inode(uint64_t segment_number, uint64_t chunk_number) {
-		std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + segment_number * segment_size);
-		return ((uint64_t*)chunk->data)[chunk_number];
-	}
+	uint64_t get_segment_chunk_to_inode(uint64_t segment_number, uint64_t chunk_number);
 
-	void set_segment_chunk_to_inode(uint64_t segment_number, uint64_t chunk_number, uint64_t inode_number) {
-		std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + segment_number * segment_size);
-		((uint64_t*)chunk->data)[chunk_number] = inode_number;
-	}
+	void set_segment_chunk_to_inode(uint64_t segment_number, uint64_t chunk_number, uint64_t inode_number);
 
-	void clear_all_segments() {
-		for(int i = 0; i < num_segments; i++) {
-			std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + i * segment_size);
-			std::memset(chunk->data, 0, chunk->size_bytes);
-			//std::cout << "Zeroed " << i << " of " << num_segments << " segments" << std::endl;
-		}
-		num_free_segments = num_segments;
-		std::shared_ptr<Chunk> chunk = disk->get_chunk(0);
-		((uint64_t*)chunk->data)[free_segment_stat_offset] = num_free_segments;
-	}
+	void clear_all_segments();
 
 	//Find a new free segment
-	void set_new_free_segment() {
-		for(int i = 0; i < num_segments; i++) {
-			if(get_segment_usage(i) == 0) {
-				current_segment = i;
-				current_chunk = 1;
-				num_free_segments -= 1;
-				std::shared_ptr<Chunk> chunk = disk->get_chunk(0);
-				((uint64_t*)chunk->data)[free_segment_stat_offset] = num_free_segments;
-				return;
-			}
-		}
-		current_segment = -1;
-	}
+	void set_new_free_segment();
 
-	//TODO: locking
-	uint64_t clean() {
-		std::vector<uint64_t> segments_to_clean;
-		uint64_t new_segment;
+	//NOTE: only call clean under lock
+	void clean();
 
-		for(int i = 0; i < num_segments; i++) {
-			if(get_segment_usage(i) == 0) {
-				new_segment = i;
-				break;
-			}
-		}
+	uint64_t alloc_next(uint64_t inode_number);
 
-		uint64_t num_chunks_to_combine = 0;
-		int i = 0;
-		while(i < num_segments) {
-			//only grab non empty segments to clean
-			uint64_t usage = get_segment_usage(i);
-			if(usage != 0) {
-				//try to add this segment to the clean up list
-				//Remember to reserve one chunk for meta data
-				if(num_chunks_to_combine + usage <= segment_size - 1) {
-					segments_to_clean.push_back(i);
-					num_chunks_to_combine += usage;
-				} else {
-					//if it doesn't fit, break if we have more than one segment to clean
-					if(segments_to_clean.size() > 1) {
-						break;
-					} else {
-						//otherwise keep the smaller of the two and look for more things to clean.
-						if(usage < num_chunks_to_combine) {
-							num_chunks_to_combine = usage;
-							segments_to_clean.pop_back();
-							segments_to_clean.push_back(i);
-						}
-					}
-				}
-			}
-			i++;
-		}
-		
-		//TODO: change above logic to grab two and do a partial clean (COUNT FREE SEGMENTS), then try cleaning again
-		if(segments_to_clean.size() == 1) {
-			throw FileSystemException("Could not find free enough segments to clean");
-		}
-
-		assert(num_chunks_to_combine > 0);
-		assert(num_chunks_to_combine <= segment_size - 1);
-
-		//create the new segment first
-		set_segment_usage(new_segment, num_chunks_to_combine);
-		uint64_t write_head = 1;
-		for(uint64_t sn : segments_to_clean) {
-			//hold this for performance
-			std::shared_ptr<Chunk> metadata_chunk = disk->get_chunk(data_offset + sn * segment_size);
-
-			//loop over the segment and grab all of the actual data
-			for(uint64_t cn = 1; cn < segment_size; cn++) {
-				uint64_t inode_num = get_segment_chunk_to_inode(sn, cn);
-				if(inode_num != 0) {
-					set_segment_chunk_to_inode(new_segment, write_head, inode_num);
-					std::shared_ptr<Chunk> to_read = disk->get_chunk(data_offset + sn * segment_size + cn);
-					std::shared_ptr<Chunk> to_write = disk->get_chunk(data_offset + new_segment * segment_size + write_head);
-					to_write->memcpy((void*)to_write->data, (void*)to_read->data, to_read->size_bytes);
-					write_head += 1;
-				}
-			}
-		}
-
-		//update pointers
-
-		//remove the old data
-		for(uint64_t sn : segments_to_clean) {
-			std::shared_ptr<Chunk> chunk = disk->get_chunk(data_offset + sn * segment_size);
-			chunk->memset(chunk->data, 0, chunk->size_bytes);
-		}
-
-		//update number of free segments
-		num_free_segments += segments_to_clean.size() - 1;
-		((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
-	}
-
-	uint64_t alloc_next(uint64_t inode_number) {
-		//lock the segment controller, releases automatically at function exit
-		std::lock_guard<std::mutex> lock(segment_controller_lock);
-
-		//make sure we still have chunks available in this segment
-		if(current_chunk == segment_size) {
-			set_new_free_segment();
-		}
-
-		//TODO: Try cleaning first?
-		//clean();
-
-		//throw exception if disk full
-		if(current_segment == -1) {
-			throw FileSystemException("FileSystem out of space -- unable to allocate a new chunk");
-		}
-
-		//increment segment usage
-		uint64_t usage = get_segment_usage(current_segment);
-		if(usage == 0) {
-			num_free_segments -= 1;
-			((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
-		}
-		set_segment_usage(current_segment, get_segment_usage(current_segment) + 1);	
-
-		//set the inode mapping
-		set_segment_chunk_to_inode(current_segment, current_chunk, inode_number);
-
-		//compute absolute index of current chunk
-		uint64_t ret = data_offset + current_segment * segment_size + current_chunk;
-
-		//update current chunk
-
-		// fprintf(stdout, "allocated chunk %d in segment %d for inode %d, absolute chunk id: %d\n"
-		// 	"\tusage: %d out of %d\n", 
-		// 	current_chunk, current_segment, inode_number, ret,
-		// 	get_segment_usage(current_segment), segment_size - 1);
-		
-		current_chunk++;
-
-		return ret;
-	}
-
-	void free_chunk(std::shared_ptr<Chunk> chunk_to_free) {
-		if (!chunk_to_free.unique()) {
-			throw FileSystemException("FileSystem free chunk failed -- the chunk passed was not 'unique', something else is using it");
-		}
-		// lock the segment controller
-		std::lock_guard<std::mutex> lock(segment_controller_lock);
-		// get the segment and relative chunk number
-		uint64_t segment_number = (chunk_to_free->chunk_idx - data_offset) / segment_size;
-		assert(segment_number < this->num_segments);
-		uint64_t chunk_number = chunk_to_free->chunk_idx - (segment_number * segment_size) - data_offset;
-		assert(chunk_number < segment_size);
-		//clear the inode mapping (Gareth's comment: clears the mapping from chunks in the segment to the inodes that reference them)
-		set_segment_chunk_to_inode(segment_number, chunk_number, 0);
-		//decrement segment usage
-		uint64_t usage = get_segment_usage(segment_number);
-		set_segment_usage(segment_number, usage - 1);
-		if(usage - 1 == 0) {
-			num_free_segments += 1;
-			((uint64_t*)disk->get_chunk(0)->data)[free_segment_stat_offset] = num_free_segments;
-		}
-	}
+	void free_chunk(std::shared_ptr<Chunk> chunk_to_free);
 };
 
 struct SuperBlock {
