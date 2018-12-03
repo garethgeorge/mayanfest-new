@@ -1,6 +1,9 @@
+# Live Inspance IP
+```
+ssh 169.231.235.232
+```
+
 # Useful Commands 
-
-
 
 figure out how big a block level device is
 ```
