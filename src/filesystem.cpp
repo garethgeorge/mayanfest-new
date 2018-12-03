@@ -98,6 +98,9 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
         {
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
+            std::cout << "bytes to write: " << bytes_write_first_chunk << " chunk size: " << chunk_size << std::endl;
+            assert(bytes_write_first_chunk <= chunk_size);
+            assert(starting_offset % chunk_size + bytes_write_first_chunk <= chunk_size);
             std::memcpy(chunk->data + (starting_offset % chunk_size), buf, bytes_write_first_chunk);
             buf += bytes_write_first_chunk;
             n -= bytes_write_first_chunk;
@@ -125,6 +128,7 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
         }
         
         {
+            assert(n <= chunk_size);
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
             std::memcpy(chunk->data, buf, n);
@@ -145,36 +149,91 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
     return bytes_to_write;
 }
 
-std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool createIfNotExists) {
-    const uint64_t num_chunk_address_per_chunk = superblock->disk_chunk_size / sizeof(uint64_t);
-    uint64_t indirect_address_count = 1;
+// static std::shared_ptr<Chunk> resolve_indirection_helper(
+//     INode *inode, 
+//     uint64_t *indirect_table, 
+//     const uint64_t chunk_number,
+//     const uint64_t indirection,
+//     const uint64_t indirect_address_count,
+//     bool createIfNotExists
+// ) {
+//     uint64_t next_chunk_loc = indirect_table[chunk_number / indirect_address_count];
+//     const uint64_t num_chunk_address_per_chunk = inode->superblock->disk_chunk_size / sizeof(uint64_t);
 
-#ifdef DEBUG
-    fprintf(stdout, "INode::resolve_indirection for chunk_number %llu (inode no: %llu)\n", chunk_number, this->inode_table_idx);
-#endif 
+//     // go through the process of getting the chunk
+//     std::shared_ptr<Chunk> chunk = nullptr;
+//     if (createIfNotExists) {
+//         chunk = inode->superblock->allocate_chunk(inode->inode_table_idx);
+//         if (next_chunk_loc == 0) {
+//             std::shared_ptr<Chunk> inherit_from = inode->superblock->disk->get_chunk(next_chunk_loc);
+//             std::memcpy(chunk->data, inherit_from->data, chunk->size_bytes);
+//         } else {
+//             std::memset(chunk->data, 0, chunk->size_bytes);
+//         }
+//     } else {
+//         if (next_chunk_loc == 0) {
+//             return nullptr;
+//         }
+//         chunk = inode->superblock->disk->get_chunk(next_chunk_loc);
+//     }
+//     assert(chunk != nullptr);
 
-    uint64_t *indirect_table = this->data.addresses; 
-    for(uint64_t indirection = 0; indirection < sizeof(INDIRECT_TABLE_SIZES) / sizeof(uint64_t); indirection++){
-#ifdef DEBUG 
-        fprintf(stdout, 
-            "INode::resolve_indirection looking for chunk_number %llu"
-            " at indirect table level %llu\n", chunk_number, indirection);
-#endif 
+//     // set it back into the indirect table of the parent chunk or whatever :) we update it!
+//     indirect_table[chunk_number] = chunk->chunk_idx;
 
-        if(chunk_number < (indirect_address_count * INDIRECT_TABLE_SIZES[indirection])) {
-            return resolve_indirection_helper(this, chunk_number, indirection);
-        }
+//     if (indirection == 0) {
+//         assert(indirect_address_count == 0);
+//         return chunk;
+//     } else {
+//         uint64_t *indirect_table = (uint64_t *)chunk->data;
+//         return resolve_indirection_helper(
+//             inode, 
+//             indirect_table, 
+//             chunk_number % indirect_address_count, 
+//             indirection - 1,
+//             indirect_address_count / num_chunk_address_per_chunk, 
+//             createIfNotExists
+//         );
+//     }
+// }
 
-        chunk_number -= (indirect_address_count * INDIRECT_TABLE_SIZES[indirection]);
-        indirect_table += INDIRECT_TABLE_SIZES[indirection];
-        indirect_address_count *= num_chunk_address_per_chunk;
-    }
+// std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool createIfNotExists) {
+//     const uint64_t num_chunk_address_per_chunk = superblock->disk_chunk_size / sizeof(uint64_t);
+//     uint64_t indirect_address_count = 1;
 
-    if (createIfNotExists) {
-        throw FileSystemException("Indirect table does not have enough space for a chunk at that high of an offset");
-    }
-    return nullptr;
-}
+// #ifdef DEBUG
+//     fprintf(stdout, "INode::resolve_indirection for chunk_number %llu (inode no: %llu)\n", chunk_number, this->inode_table_idx);
+// #endif 
+
+//     uint64_t *indirect_table = this->data.addresses; 
+//     for(uint64_t indirection = 0; indirection < sizeof(INDIRECT_TABLE_SIZES) / sizeof(uint64_t); indirection++){
+// #ifdef DEBUG 
+//         fprintf(stdout, 
+//             "INode::resolve_indirection looking for chunk_number %llu"
+//             " at indirect table level %llu\n", chunk_number, indirection);
+// #endif 
+
+//         if(chunk_number < (indirect_address_count * INDIRECT_TABLE_SIZES[indirection])) {
+//             return resolve_indirection_helper(
+//                 this, 
+//                 indirect_table,
+//                 chunk_number, 
+//                 indirection, 
+//                 indirect_address_count, 
+//                 createIfNotExists
+//             );
+//         }
+
+//         chunk_number -= (indirect_address_count * INDIRECT_TABLE_SIZES[indirection]);
+//         indirect_table += INDIRECT_TABLE_SIZES[indirection];
+//         indirect_address_count *= num_chunk_address_per_chunk;
+//     }
+
+//     if (createIfNotExists) {
+//         throw FileSystemException("Indirect table does not have enough space for a chunk at that high of an offset");
+//     }
+//     return nullptr;
+// }
 
 std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool createIfNotExists) {
     const uint64_t num_chunk_address_per_chunk = superblock->disk_chunk_size / sizeof(uint64_t);

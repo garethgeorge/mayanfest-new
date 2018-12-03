@@ -48,7 +48,7 @@ TEST_CASE( "Making a filesystem should work", "[filesystem]" ) {
 	}
 }
 
-TEST_CASE("INode read/write test", "[filesystem][readwrite][readwrite.orderly]") {
+TEST_CASE("INode read/write test", "[filesystem][readwritem][readwrite.orderly]") {
 	const auto test_inode = [](int offset, int length) {
 		std::unique_ptr<Disk> disk(new Disk(1024, 512));
 		std::vector<char> read_back;
@@ -99,6 +99,12 @@ TEST_CASE("INode read/write test", "[filesystem][readwrite][readwrite.orderly]")
 		}
 	};
 
+
+	SECTION("Can write strings of length 1 - 5000") {
+		std::cout << "RUNNING MY TEST, WRITING 100000 BYTES" << std::endl;
+		test_inode(0, 100000);
+	}
+
 	SECTION("Can write strings of length 1 - 5000") {
 		for (int i = 0; i < 5000; ++i) {
 			test_inode(0, i);
@@ -117,9 +123,9 @@ TEST_CASE("INode read/write test", "[filesystem][readwrite][readwrite.orderly]")
 		}
 	}
 
-	SECTION("Can write strings of length 2000 at offsets 1 - 5000") {
+	SECTION("Can write strings of length 5000 at offsets 1 - 5000") {
 		for (int i = 0; i < 5000; ++i) {
-			test_inode(i, 2000);
+			test_inode(i, 5000);
 		}
 	}
 }
@@ -214,7 +220,7 @@ TEST_CASE("INode write all, then readback all, reconstruct disk, and then do it 
 	// REQUIRE(std::memcmp(mem_file.get(), mem_file_readback.get(), FILE_SIZE) == 0);
 }
 
-TEST_CASE("Smaller version of INode write all, then readback all, reconstruct disk, and then do it again!!! but using a very high base offset", "[filesyste][readwrite][readwrite.rwrecon]") {
+TEST_CASE("Smaller version of INode write all, then readback all, reconstruct disk, and then do it again!!! but using a very high base offset", "[filesystem][readwrite][readwrite.rwrecon]") {
 	const auto get_random_buffer = [](size_t size, bool nullTerminate = false) -> std::vector<char> {
 		std::vector<char> buf;
 		buf.reserve(size + 1);
