@@ -1,5 +1,7 @@
 import os
+import random
 import shutil
+import string
 
 import unittest
 
@@ -9,11 +11,11 @@ class IntegrationTest(unittest.TestCase):
         ''' setup '''
         self.mountPoint = '../build/mount'
         self.testPoint = '../../testpoint'
-        os.mkdir(self.testPoint)
+        # os.mkdir(self.testPoint)
 
     def tearDown(self):
         ''' teardown '''
-        shutil.rmtree(self.testPoint)
+        # shutil.rmtree(self.testPoint)
         pass
 
     def testSetup(self):
@@ -32,6 +34,10 @@ class IntegrationTest(unittest.TestCase):
         os.mkdir(mountDir)
 
         assert os.path.isdir(mountDir) == os.path.isdir(testDir)
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
 
     def testMkdirSame(self):
         ''' trying to create same directory twice generates error code '''
@@ -54,6 +60,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testMknod(self):
         ''' nod can be created '''
         nodName = 'hello.txt'
@@ -65,6 +75,10 @@ class IntegrationTest(unittest.TestCase):
         os.mknod(testNod)
 
         assert os.path.isfile(mountNod) == os.path.isfile(testNod)
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
 
     def testMknodSame(self):
         ''' trying to create same nod twice generates error '''
@@ -87,6 +101,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testUnlinkNod(self):
         ''' nod can be created and deleted '''
         nodName = 'testUnlink.txt'
@@ -99,6 +117,10 @@ class IntegrationTest(unittest.TestCase):
 
         os.unlink(testNod)
         os.unlink(mountNod)
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
 
     def testUnlinkNodNonExistent(self):
         ''' trying to delete non-existent nod generates error '''
@@ -116,6 +138,10 @@ class IntegrationTest(unittest.TestCase):
         except OSError, e:
             B = e.args[0]
         
+        assert A == B
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
         assert A == B
 
     def testMknodUnlinkWrite(self):
@@ -148,6 +174,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testUnlinkDir(self):
         ''' trying to delete directory generates error '''
         dirName = 'testUnlinkDir'
@@ -169,6 +199,10 @@ class IntegrationTest(unittest.TestCase):
         
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testRmdir(self):
         ''' create and delete a directory '''
         dirName = 'testRmdir'
@@ -181,6 +215,10 @@ class IntegrationTest(unittest.TestCase):
 
         os.rmdir(testDir)
         os.rmdir(mountDir)
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
 
     def testRmdirNonExistent(self):
         ''' trying to delete a non-existent directory generates error '''
@@ -200,6 +238,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testReaddir(self):
         ''' directory can be read '''
         parentDir = 'testReadDir'
@@ -215,6 +257,10 @@ class IntegrationTest(unittest.TestCase):
         A = set(os.listdir(os.path.join(self.testPoint, parentDir)))
         B = set(os.listdir(os.path.join(self.mountPoint, parentDir)))
 
+        assert A == B
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
         assert A == B
 
     def testReaddirNonExistent(self):
@@ -235,6 +281,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testOpenCloseFile(self):
         ''' open a file '''
         fileName = 'testOpenFile.txt'
@@ -247,6 +297,10 @@ class IntegrationTest(unittest.TestCase):
 
         os.close(fd1)
         os.close(fd2)
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
 
     def testOpenFileNonExistent(self):
         ''' trying to open a non-existent file generates error '''
@@ -261,6 +315,10 @@ class IntegrationTest(unittest.TestCase):
         except OSError, e:
             B = e.args[0]
 
+        assert A == B
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
         assert A == B
 
     def testWriteRead(self):
@@ -292,6 +350,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testWriteReadMore(self):
         ''' write to file and then try to read more chars '''
         fileName = 'testWriteReadMore.txt'
@@ -318,6 +380,10 @@ class IntegrationTest(unittest.TestCase):
         B = os.read(mountFD, len(content) * 2)
         os.close(mountFD)
 
+        assert A == B
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
         assert A == B
 
     def testOverwrite(self):
@@ -357,6 +423,10 @@ class IntegrationTest(unittest.TestCase):
 
         assert A == B
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
+
     def testFileCreatedByRootForNonRoot(self):
         ''' create a file as root user for non-root user '''
         fileName = 'fileCreatedByRootForNonRoot.txt'
@@ -384,7 +454,7 @@ class IntegrationTest(unittest.TestCase):
         except OSError, e:
             B = e.args[0]
 
-        print('A:{0} B:{1}'.format(A, B))
+        #print('A:{0} B:{1}'.format(A, B))
         assert A == B
 
         contentOfA = ''
@@ -404,43 +474,82 @@ class IntegrationTest(unittest.TestCase):
         except OSError, e:
             B = e.args[0]
 
-        print('A:{0} B:{1}'.format(A, B))
+        #print('A:{0} B:{1}'.format(A, B))
         assert A == B
         #assert contentOfA == content
         #assert contentOfB == content
 
         os.seteuid(os.getuid())
 
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
 
-        #pid = os.fork()
-        #if pid == 0:
-        #    try:
-        #        os.setuid(nonRootID)
+    def testTryToFindDiskCorruption(self):
+        ''' 
+            try to write to two files intermittently
+            in the middle try to create and delete directories
+            something weird might happen like files being missing
+        '''
+        fileName1 = 'fileName1.txt'
+        fileName2 = 'fileName2.txt'
+        dirName = 'diskCorruption'
 
-        #        testFD = os.open(testFileName, os.O_WRONLY)
-        #        os.write(testFD, content)
-        #        os.close(testFD)
+        counter = 1024 * 1024
+        sizePerIter = 4096
 
-        #        print('inside try')
+        testFileName1 = os.path.join(self.testPoint, fileName1)
+        testFileName2 = os.path.join(self.testPoint, fileName2)
+        mountFileName1 = os.path.join(self.mountPoint, fileName1)
+        mountFileName2 = os.path.join(self.mountPoint, fileName2)
+        testDirName = os.path.join(self.testPoint, dirName)
+        mountDirName = os.path.join(self.mountPoint, dirName)
 
-        #        mountFD = os.open(mountFileName, os.O_WRONLY)
-        #        os.write(mountFD, content)
-        #        os.close(mountFD)
+        os.mknod(testFileName1)
+        os.mknod(testFileName2)
+        os.mknod(mountFileName1)
+        os.mknod(mountFileName2)
 
-        #        testFD = os.open(testFileName, os.O_RDONLY)
-        #        A = os.read(testFD, len(content))
-        #        os.close(testFD)
+        # write two files intermittently
+        fd1 = os.open(testFileName1, os.O_WRONLY)
+        fd2 = os.open(testFileName2, os.O_WRONLY)
+        letters = string.letters
+        for x in range(counter):
+            letter = random.choice(letters)
+            os.write(fd1, letter)
+            if x == (counter / 2):
+                os.mkdir(testDirName)
+            #if x == (counter / 2) + 1:
+            #    os.rmdir(testDirName)
+            os.write(fd2, letter)
+        os.close(fd1)
+        os.close(fd2)
 
-        #        mountFD = os.open(mountFileName, os.O_RDONLY)
-        #        B = os.read(mountFD, len(content))
-        #        os.close(mountFD)
+        fd1 = os.open(mountFileName1, os.O_WRONLY)
+        fd2 = os.open(mountFileName2, os.O_WRONLY)
+        letters = string.letters
+        for x in range(counter):
+            letter = random.choice(letters)
+            os.write(fd1, letter)
+            if x == (counter / 2):
+                os.mkdir(mountDirName)
+            #if x == (counter / 2) + 1:
+            #    os.rmdir(mountDirName)
+            os.write(fd2, letter)
+        os.close(fd1)
+        os.close(fd2)
 
-        #        print('A:{0} B:{1}'.format(A, B))
-        #        assert A == content
-        #        assert A == B
-        #    finally:
-        #        os._exit(0)
-        #os.waitpid(pid, 0)
+        testFD1 = os.open(testFileName1, os.O_RDONLY)
+        testFD2 = os.open(testFileName2, os.O_RDONLY)
+        mountFD1 = os.open(mountFileName1, os.O_RDONLY)
+        mountFD2 = os.open(mountFileName2, os.O_RDONLY)
+
+        assert os.read(testFD1, counter) == os.read(testFD2, counter)
+        assert os.read(mountFD1, counter) == os.read(mountFD2, counter)
+
+        A = set(os.listdir(self.testPoint))
+        B = set(os.listdir(self.mountPoint))
+        assert A == B
         
     #def testWriteTillYouDie(self):
     #    ''' try to write huge number of small size files '''
