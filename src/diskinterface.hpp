@@ -38,6 +38,21 @@ struct Chunk {
 	Byte *data = nullptr;
 
 	~Chunk();
+	
+	inline void memcpy(void *dst, const void *src, size_t length, std::shared_ptr<Chunk> src_chunk = nullptr) {
+		assert((Byte *)dst >= this->data && (Byte *)dst + length <= this->data + this->size_bytes);
+		if (src_chunk != nullptr) {
+			assert(src_chunk->size_bytes == this->size_bytes);
+			assert((Byte *)src >= src_chunk->data && (Byte *)src + length <= src_chunk->data + src_chunk->size_bytes);
+		}
+
+		std::memcpy(dst, src, length);
+	}
+
+	inline void memset(void *dst, Byte value, size_t length) {
+		assert((Byte *)dst >= this->data & (Byte *)dst + length <= this->data + size_bytes);
+		std::memset(dst, value, length);
+	}
 };
 
 

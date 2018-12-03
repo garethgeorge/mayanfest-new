@@ -30,8 +30,8 @@ std::shared_ptr<Chunk> Disk::get_chunk(Size chunk_idx) {
 	chunk->chunk_idx = chunk_idx;
 
 	// chunk->data = this->data + chunk_idx * this->chunk_size();
-	chunk->data = new Byte[this->chunk_size() * 2];
-	std::memcpy(chunk->data, this->data + chunk_idx * this->chunk_size(), 
+	chunk->data = new Byte[this->chunk_size() * 4];
+	chunk->memcpy(chunk->data, this->data + chunk_idx * this->chunk_size(), 
 		this->chunk_size());
 
 	// store it into the chunk cache so that it can be shared if requested again
@@ -44,7 +44,7 @@ void Disk::flush_chunk(const Chunk& chunk) {
 
 	assert(chunk.size_bytes == this->chunk_size());
 	assert(chunk.parent == this);
-
+	
 	std::memcpy(this->data + chunk.chunk_idx * this->chunk_size(), 
 		chunk.data, this->chunk_size());
 
@@ -107,7 +107,7 @@ DiskBitMap::~DiskBitMap() {
 
 void DiskBitMap::clear_all() {
 	for (std::shared_ptr<Chunk>& chunk : chunks) {
-		std::memset(chunk->data, 0, chunk->size_bytes);
+		chunk->memset(chunk->data, 0, chunk->size_bytes);
 	}
 
 	for (uint64_t idx = this->size_in_bits; idx < this->size_in_bits + 8; ++idx) {
@@ -144,44 +144,64 @@ DiskBitMap::BitRange DiskBitMap::find_unset_bits(Size length) {
 	
 	// fprintf(stdout, "SCANNING BITMAP (SIZE IN BITS): %llu\n", this->size_in_bits);
 
-	BitRange retval;
-	for (Size idx = last_search_idx; idx < this->size_in_bits; idx += 8) {
-		const Byte byte = (size_t)this->get_byte_for_idx(idx);
-		BitRange res = find_unset_cache[byte];
-		res.start_idx += idx;
+	for (Size idx = 0; idx < this->size_in_bits; ++idx) {
+		if (!this->get(idx)) {
+			DiskBitMap::BitRange range;
+			range.start_idx = idx;
+			range.bit_count = 1;
 
-		// fprintf(stdout, "SCANNING %d : %x\n", idx, byte);
-
-		// if retval already set, the next set of bits must start immediately where the last one ends
-		if (retval.bit_count != 0 && res.start_idx != retval.start_idx + retval.bit_count) {
-			last_search_idx = idx;
-			break ;
-		}
-
-		if (res.bit_count != 0) {
-			if (retval.bit_count == 0) {
-				retval = res;
-			} else {
-				retval.bit_count += res.bit_count;
+			while (range.bit_count < length && !this->get(++idx) && idx < this->size_in_bits) {
+				range.bit_count++;
 			}
+
+			return range;
+		}
+	}
+
+	DiskBitMap::BitRange range;
+	range.start_idx = 0;
+	range.bit_count = 0;
+
+	return range;
+
+	// BitRange retval;
+	// for (Size idx = last_search_idx; idx < this->size_in_bits; idx += 8) {
+	// 	const Byte byte = (size_t)this->get_byte_for_idx(idx);
+	// 	BitRange res = find_unset_cache[byte];
+	// 	res.start_idx += idx;
+
+	// 	// fprintf(stdout, "SCANNING %d : %x\n", idx, byte);
+
+	// 	// if retval already set, the next set of bits must start immediately where the last one ends
+	// 	if (retval.bit_count != 0 && res.start_idx != retval.start_idx + retval.bit_count) {
+	// 		last_search_idx = idx;
+	// 		break ;
+	// 	}
+
+	// 	if (res.bit_count != 0) {
+	// 		if (retval.bit_count == 0) {
+	// 			retval = res;
+	// 		} else {
+	// 			retval.bit_count += res.bit_count;
+	// 		}
 			
-			if (retval.bit_count >= length) {
-				last_search_idx = idx;
-				break;
-			}
-		}
-	}
+	// 		if (retval.bit_count >= length) {
+	// 			last_search_idx = idx;
+	// 			break;
+	// 		}
+	// 	}
+	// }
 
-	// bitcount should be limited to the length requested
-	if (retval.bit_count > length) {
-		retval.bit_count = length;
-	}
+	// // bitcount should be limited to the length requested
+	// if (retval.bit_count > length) {
+	// 	retval.bit_count = length;
+	// }
 
-	if (retval.bit_count == 0 && last_search_idx != 0) {
-		this->last_search_idx = 0;
-		return this->find_unset_bits(length);
-	}
+	// if (retval.bit_count == 0 && last_search_idx != 0) {
+	// 	this->last_search_idx = 0;
+	// 	return this->find_unset_bits(length);
+	// }
 
-	return retval;
+	// return retval;
 }
 
