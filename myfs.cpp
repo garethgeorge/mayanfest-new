@@ -486,8 +486,7 @@ static int myfs_rmdir(const char *path) {
 	const char *name = basename(path_cpy1.get());
 	const char *dir = dirname(path_cpy2.get());
 
-	try {
-		
+	try {		
 		std::shared_ptr<INode> dir_inode = resolve_path(dir);
 		std::shared_ptr<INode> file_inode = resolve_path(path);
 		if (file_inode == nullptr || dir_inode == nullptr) {

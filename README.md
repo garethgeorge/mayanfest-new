@@ -1,6 +1,11 @@
+# Live Inspance IP
+```
+ssh 169.231.235.232
+./mkfs.myfs /dev/vdb 32212254720 
+./myfs /dev/vdb -f mountpoint 
+```
+
 # Useful Commands 
-
-
 
 figure out how big a block level device is
 ```

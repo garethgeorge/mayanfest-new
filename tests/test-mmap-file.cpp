@@ -9,6 +9,7 @@
 #include "diskinterface.hpp"
 #include "filesystem.hpp"
 
+/*
 TEST_CASE( "Should be able to construct a filesystem in a memory mapped file", "[mmap]" ) {
 
 	constexpr uint64_t CHUNK_COUNT = 4096;
@@ -121,3 +122,4 @@ TEST_CASE("INodes can be used to store and read directories on a mmap'd disk", "
 		}
 	}
 }
+}*/

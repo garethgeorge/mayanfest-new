@@ -176,7 +176,6 @@ TEST_CASE("INode read/write test with random patterns", "[filesystem][readwrite]
 }
 
 
-
 TEST_CASE("INode write all, then readback all, reconstruct disk, and then do it again!!!", "[filesystem][readwrite][readwrite.rwrecon]") {
 	std::unique_ptr<Disk> disk(new Disk(100 * 1024, 512));
 	std::unique_ptr<FileSystem> fs(new FileSystem(disk.get()));
@@ -498,6 +497,66 @@ TEST_CASE("INodes can be used to store and read directories", "[filesystem][idir
 			}
 
 			REQUIRE(count == 0);
+		}
+	}
+}
+
+TEST_CASE("Many INodes can be written and cleaned", "[filesystem][cleaning]") {
+	std::unique_ptr<Disk> disk(new Disk(1024 * 64, 1024));
+	std::unique_ptr<FileSystem> fs(new FileSystem(disk.get()));
+	fs->superblock->init(0.1);
+	uint64_t segment_size_bytes = fs->superblock->segment_controller.segment_size * 1024;
+
+	SECTION("Can write a MANY file to a directory") {
+		std::shared_ptr<INode> inode_dir = fs->superblock->inode_table->alloc_inode();
+
+		int i;
+		for(i = 0; i < fs->superblock->segment_controller.num_segments*7/5; i++) {
+			std::shared_ptr<INode> inode_file = fs->superblock->inode_table->alloc_inode();
+
+			std::cout << "writing file " << i << " of " << fs->superblock->segment_controller.num_segments*7/5 << std::endl;
+
+			std::vector<char> to_write;
+			for (int j = 0; j < segment_size_bytes/7; ++j) {
+				to_write.push_back('A' + i);
+			}
+			to_write.push_back('\0');
+
+			char buf[256];
+			sprintf(buf, "file-%d", i);
+
+			IDirectory directory(*inode_dir);
+			directory.add_file(buf, *inode_file);
+			inode_file->write(0, &to_write[0], to_write.size());
+			directory.flush();
+		}
+		for(int j = 0; j < fs->superblock->segment_controller.num_segments*7/5; j++) {
+			if(j % 5 == 0) {
+				continue;
+			}
+			IDirectory directory(*inode_dir);
+			char buf[256];
+			sprintf(buf, "file-%d", j);
+			auto entry = directory.remove_file(buf);
+			REQUIRE(entry != nullptr);
+			fs->superblock->inode_table->get_inode(entry->inode_idx)->release_chunks();
+		}
+		for(i; i < fs->superblock->segment_controller.num_segments*7/5 + fs->superblock->segment_controller.num_segments*7/10; i++) {
+			std::shared_ptr<INode> inode_file = fs->superblock->inode_table->alloc_inode();
+
+			std::vector<char> to_write;
+			for (int j = 0; j < segment_size_bytes/7; ++j) {
+				to_write.push_back('A' + i);
+			}
+			to_write.push_back('\0');
+
+			char buf[256];
+			sprintf(buf, "file-%d", i);
+
+			IDirectory directory(*inode_dir);
+			directory.add_file(buf, *inode_file);
+			inode_file->write(0, &to_write[0], to_write.size());
+			directory.flush();
 		}
 	}
 }
