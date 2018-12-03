@@ -360,6 +360,7 @@ struct INode {
 	}
 
 	std::shared_ptr<Chunk> resolve_indirection(uint64_t chunk_number, bool createIfNotExists);
+	void update_chunk_locations(const std::unordered_map<uint64_t, uint64_t> &mapping);
 
 	static uint64_t get_file_size();
 
