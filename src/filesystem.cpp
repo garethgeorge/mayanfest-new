@@ -98,10 +98,9 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
         {
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
-            std::cout << "bytes to write: " << bytes_write_first_chunk << " chunk size: " << chunk_size << std::endl;
             assert(bytes_write_first_chunk <= chunk_size);
             assert(starting_offset % chunk_size + bytes_write_first_chunk <= chunk_size);
-            std::memcpy(chunk->data + (starting_offset % chunk_size), buf, bytes_write_first_chunk);
+            chunk->memcpy(chunk->data + (starting_offset % chunk_size), buf, bytes_write_first_chunk);
             buf += bytes_write_first_chunk;
             n -= bytes_write_first_chunk;
         }
@@ -121,7 +120,7 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
         while (n > chunk_size) {
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
-            std::memcpy(chunk->data, buf, chunk_size);
+            chunk->memcpy(chunk->data, buf, chunk_size);
             buf += chunk_size;
             n -= chunk_size;
             starting_offset += chunk_size;
@@ -131,7 +130,7 @@ uint64_t INode::write(uint64_t starting_offset, const char *buf, uint64_t bytes_
             assert(n <= chunk_size);
             std::shared_ptr<Chunk> chunk = this->resolve_indirection(starting_offset / chunk_size, true);
             std::lock_guard<std::mutex> g(chunk->lock);
-            std::memcpy(chunk->data, buf, n);
+            chunk->memcpy(chunk->data, buf, n);
         }
     } catch (const FileSystemException& e) {
         // make sure the filesize at the end is correct no matter what happens
@@ -278,9 +277,9 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
 #endif
                 if (next_chunk_loc != 0) {
                     std::shared_ptr<Chunk> oldChunk = this->superblock->disk->get_chunk(next_chunk_loc);
-                    std::memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes);
+                    newChunk->memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes, oldChunk);
                 } else {
-                    std::memset((void *)newChunk->data, 0, newChunk->size_bytes);
+                    newChunk->memset((void *)newChunk->data, 0, newChunk->size_bytes);
                 }
                 indirect_table[indirect_table_idx] = newChunk->chunk_idx;
                 next_chunk_loc = newChunk->chunk_idx;
@@ -321,9 +320,9 @@ std::shared_ptr<Chunk> INode::resolve_indirection(uint64_t chunk_number, bool cr
                     std::shared_ptr<Chunk> newChunk = this->superblock->allocate_chunk(this->inode_table_idx);
                     if (next_chunk_loc != 0) {
                         std::shared_ptr<Chunk> oldChunk = this->superblock->disk->get_chunk(next_chunk_loc);
-                        std::memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes);
+                        newChunk->memcpy((void *)newChunk->data, (void *)oldChunk->data, newChunk->size_bytes, oldChunk);
                     } else {
-                        std::memset((void *)newChunk->data, 0, newChunk->size_bytes);
+                        newChunk->memset((void *)newChunk->data, 0, newChunk->size_bytes);
                     }
                     next_chunk_loc = newChunk->chunk_idx;
                     lookup_table[chunk_number / indirect_address_count] = newChunk->chunk_idx;
@@ -496,7 +495,10 @@ void INodeTable::update_inode(const INode& inode) {
     uint64_t chunk_idx = inode_ilist_offset + inode.inode_table_idx / inodes_per_chunk;
     uint64_t chunk_offset = inode.inode_table_idx % inodes_per_chunk;
     std::shared_ptr<Chunk> chunk = superblock->disk->get_chunk(chunk_idx);
-    std::memcpy((void *)(chunk->data + sizeof(INode::INodeData) * chunk_offset), (void *)(&(inode.data)), sizeof(INode::INodeData));
+
+    assert((Byte *)(chunk->data + sizeof(INode::INodeData) * chunk_offset + sizeof(INode::INodeData)) < chunk->data + chunk->size_bytes);
+
+    chunk->memcpy((void *)(chunk->data + sizeof(INode::INodeData) * chunk_offset), (void *)(&(inode.data)), sizeof(INode::INodeData));
 }
 
 void INodeTable::free_inode(std::shared_ptr<INode> inode) {
@@ -735,100 +737,236 @@ void FileSystem::printForDebug() {
     DIRECTORY IMPLEMENTATION
 */
 
+// IDirectory::IDirectory(INode &inode) : inode(&inode) {
+//     this->inode->read(0, (char *)&header, sizeof(DirHeader));
+// }
+
+// uint64_t IDirectory::DirEntry::read_from_disk(size_t offset) {
+//     this->offset = offset;
+
+//     this->inode->read(offset, (char *)(&(this->data)), sizeof(DirEntryData));
+//     offset += sizeof(DirEntryData);
+    
+//     if (this->filename != nullptr) {
+//         free(this->filename);
+//     }
+//     this->filename = (char *)malloc(this->data.filename_length + 1);
+//     std::memset(this->filename, 0, this->data.filename_length + 1);
+//     this->inode->read(offset, this->filename, data.filename_length);
+//     offset += this->data.filename_length;
+
+//     return offset;
+// }
+
+// uint64_t IDirectory::DirEntry::write_to_disk(size_t offset, const char *filename) {
+//     this->offset = offset;
+//     this->inode->write(offset, (char *)(&(this->data)), sizeof(DirEntryData));
+//     offset += sizeof(DirEntryData);
+    
+//     if (filename != nullptr) {
+//         assert(data.filename_length != 0);
+//         assert(data.filename_length == strlen(filename));
+//         this->inode->write(offset, filename, data.filename_length);
+//     }
+
+//     offset += data.filename_length;
+
+//     return offset;
+// }
+
+// void IDirectory::flush() { // flush your changes 
+//     inode->write(0, (char *)&header, sizeof(DirHeader));
+// }
+
+// void IDirectory::initializeEmpty() {
+//     header = DirHeader();
+//     inode->write(0, (char *)&header, sizeof(DirHeader));
+// }
+
+// std::unique_ptr<IDirectory::DirEntry> IDirectory::add_file(const char *filename, const INode &child) {
+//     if (this->get_file(filename) != nullptr) {
+//         return nullptr;
+//     }
+
+//     if (header.dir_entries_head == 0) {
+//         // then it is the first and only element in the linked list!
+//         std::unique_ptr<DirEntry> entry(new DirEntry(this->inode));
+//         entry->data.filename_length = strlen(filename);
+//         entry->data.inode_idx = child.inode_table_idx;
+//         entry->filename = strdup(filename);
+        
+//         // returns the offset after the write of the entry
+//         size_t next_offset = entry->write_to_disk(sizeof(DirHeader), entry->filename);
+//         header.dir_entries_head = sizeof(DirHeader);
+//         header.dir_entries_tail = sizeof(DirHeader);
+//         header.record_count++;
+//         // finally, flush ourselves to the disk
+        
+//         this->flush();
+//         return std::move(entry);
+//     } else {
+
+//         DirEntry last_entry(this->inode);
+//         size_t next_offset = last_entry.read_from_disk(header.dir_entries_tail);
+//         last_entry.data.next_entry_ptr = next_offset;
+//         last_entry.write_to_disk(header.dir_entries_tail, nullptr);
+
+//         std::unique_ptr<DirEntry> new_entry(new DirEntry(this->inode));
+//         new_entry->data.filename_length = strlen(filename);
+//         new_entry->data.inode_idx = child.inode_table_idx;
+//         new_entry->filename = strdup(filename);
+//         new_entry->write_to_disk(next_offset, new_entry->filename);
+
+//         header.dir_entries_tail = next_offset;
+//         header.record_count++;
+
+//         this->flush();
+//         return std::move(new_entry);
+//     }
+// }
+
+// std::unique_ptr<IDirectory::DirEntry> IDirectory::get_file(const char *filename) {
+//     std::unique_ptr<DirEntry> entry = nullptr;
+
+//     while (entry = this->next_entry(entry)) {
+//         if (strcmp(entry->filename, filename) == 0) {
+//             return entry;
+//         }
+//     }
+
+//     return nullptr;
+// }
+
+// std::unique_ptr<IDirectory::DirEntry> IDirectory::remove_file(const char *filename) {
+//     std::unique_ptr<DirEntry> last_entry = nullptr;
+//     std::unique_ptr<DirEntry> entry = nullptr;
+
+//     size_t count = 0;
+//     while (true) {
+//         last_entry = std::move(entry);
+//         entry = this->next_entry(last_entry);
+//         if (entry == nullptr)
+//             break ;
+
+//         if (strcmp(entry->filename, filename) == 0) {
+
+//             if (last_entry == nullptr) {
+//                 header.dir_entries_head = entry->data.next_entry_ptr;
+//                 if (entry->data.next_entry_ptr == 0) {
+//                     header.dir_entries_tail = 0;
+//                 }
+//             } else {
+//                 last_entry->data.next_entry_ptr = entry->data.next_entry_ptr;
+//                 last_entry->write_to_disk(last_entry->offset, nullptr);
+
+//                 if (last_entry->data.next_entry_ptr == 0) {
+//                     header.dir_entries_tail = last_entry->offset;
+//                 }
+//             }
+            
+//             header.deleted_record_count++;
+//             header.record_count--;
+//             this->flush(); // make sure we flush out the changes to the header
+//             return entry;
+//         }
+
+//         if (count++ > 50) {
+//             break ;
+//         }
+//     }
+
+//     return nullptr;
+// }
+
+// std::unique_ptr<IDirectory::DirEntry> IDirectory::next_entry(const std::unique_ptr<IDirectory::DirEntry>& entry) {
+//     std::unique_ptr<DirEntry> next(new DirEntry(this->inode));
+//     if (entry == nullptr) {
+//         if (header.record_count == 0)
+//             return nullptr;
+
+//         next->read_from_disk(this->header.dir_entries_head);
+//     } else {
+//         if (entry->data.next_entry_ptr == 0) 
+//             return nullptr; // reached the end of the linked list
+
+//         next->read_from_disk(entry->data.next_entry_ptr);
+//     }
+
+//     return next;
+// }
+
+/*
+    IDirectory reimplementation
+*/
+struct RawRecord {
+    uint64_t flag;
+    char filename[255];
+    uint64_t inode_idx;
+};
+
 IDirectory::IDirectory(INode &inode) : inode(&inode) {
-    this->inode->read(0, (char *)&header, sizeof(DirHeader));
-}
-
-uint64_t IDirectory::DirEntry::read_from_disk(size_t offset) {
-    this->offset = offset;
-
-    this->inode->read(offset, (char *)(&(this->data)), sizeof(DirEntryData));
-    offset += sizeof(DirEntryData);
-    
-    if (this->filename != nullptr) {
-        free(this->filename);
-    }
-    this->filename = (char *)malloc(this->data.filename_length + 1);
-    std::memset(this->filename, 0, this->data.filename_length + 1);
-    this->inode->read(offset, this->filename, data.filename_length);
-    offset += this->data.filename_length;
-
-    return offset;
-}
-
-uint64_t IDirectory::DirEntry::write_to_disk(size_t offset, const char *filename) {
-    this->offset = offset;
-    this->inode->write(offset, (char *)(&(this->data)), sizeof(DirEntryData));
-    offset += sizeof(DirEntryData);
-    
-    if (filename != nullptr) {
-        assert(data.filename_length != 0);
-        assert(data.filename_length == strlen(filename));
-        this->inode->write(offset, filename, data.filename_length);
-    }
-
-    offset += data.filename_length;
-
-    return offset;
-}
-
-void IDirectory::flush() { // flush your changes 
-    inode->write(0, (char *)&header, sizeof(DirHeader));
 }
 
 void IDirectory::initializeEmpty() {
-    header = DirHeader();
-    inode->write(0, (char *)&header, sizeof(DirHeader));
 }
 
 std::unique_ptr<IDirectory::DirEntry> IDirectory::add_file(const char *filename, const INode &child) {
-    if (this->get_file(filename) != nullptr) {
-        return nullptr;
+    const uint64_t file_size_bytes = inode->data.file_size;
+    const uint64_t file_size_records = file_size_bytes / sizeof(RawRecord);
+    assert(file_size_bytes % sizeof(RawRecord) == 0);
+    std::unique_ptr<Byte[]> read_buffer_unique(new Byte[file_size_bytes]);
+    Byte* read_buffer = read_buffer_unique.get();
+    
+    RawRecord write_record;
+    //read in the entire directory to memory
+    this->inode->read(0, (char *)read_buffer, file_size_bytes);
+    bool found_slot = false;
+    uint64_t index = 0;
+
+    //locate an empty record slot, if any
+    for(index = 0; index < file_size_records; index++) {
+        if(read_buffer[index * sizeof(RawRecord)] == 0) {
+            found_slot = true;
+            break;
+        }
     }
 
-    if (header.dir_entries_head == 0) {
-        // then it is the first and only element in the linked list!
-        std::unique_ptr<DirEntry> entry(new DirEntry(this->inode));
-        entry->data.filename_length = strlen(filename);
-        entry->data.inode_idx = child.inode_table_idx;
-        entry->filename = strdup(filename);
-        
-        // returns the offset after the write of the entry
-        size_t next_offset = entry->write_to_disk(sizeof(DirHeader), entry->filename);
-        header.dir_entries_head = sizeof(DirHeader);
-        header.dir_entries_tail = sizeof(DirHeader);
-        header.record_count++;
-        // finally, flush ourselves to the disk
-        
-        this->flush();
-        return std::move(entry);
+    //create the new record in memory
+    write_record.flag = 1;
+    strncpy(write_record.filename, filename, 255);
+    write_record.inode_idx = child.inode_table_idx;
+
+    //write the new record to the found slot, or to a newly appended slot
+    if(found_slot) {
+        inode->write(index * sizeof(RawRecord), (const char *)&write_record, sizeof(RawRecord));
     } else {
-
-        DirEntry last_entry(this->inode);
-        size_t next_offset = last_entry.read_from_disk(header.dir_entries_tail);
-        last_entry.data.next_entry_ptr = next_offset;
-        last_entry.write_to_disk(header.dir_entries_tail, nullptr);
-
-        std::unique_ptr<DirEntry> new_entry(new DirEntry(this->inode));
-        new_entry->data.filename_length = strlen(filename);
-        new_entry->data.inode_idx = child.inode_table_idx;
-        new_entry->filename = strdup(filename);
-        new_entry->write_to_disk(next_offset, new_entry->filename);
-
-        header.dir_entries_tail = next_offset;
-        header.record_count++;
-
-        this->flush();
-        return std::move(new_entry);
+        inode->write(file_size_bytes, (const char *)&write_record, sizeof(RawRecord));
     }
+
+    //return a dir entry
+    std::unique_ptr<DirEntry> ret(new DirEntry);
+    ret->filename = std::string(filename, 0, 255);
+    ret->inode_idx = child.inode_table_idx;
+
+    return ret;
 }
 
 std::unique_ptr<IDirectory::DirEntry> IDirectory::get_file(const char *filename) {
-    std::unique_ptr<DirEntry> entry = nullptr;
+    const uint64_t file_size_bytes = inode->data.file_size;
+    const uint64_t file_size_records = file_size_bytes / sizeof(RawRecord);
+    std::unique_ptr<Byte[]> read_buffer_unique(new Byte[file_size_bytes]);
+    RawRecord* records = (RawRecord *)read_buffer_unique.get();
 
-    while (entry = this->next_entry(entry)) {
-        if (strcmp(entry->filename, filename) == 0) {
-            return entry;
+    //read in the entire directory to memory
+    inode->read(0, (char *)records, file_size_bytes);
+
+    //locate the file, if exists
+    for(uint64_t index = 0; index < file_size_records; index++) {
+        if(records[index].flag != 0 && strncmp(records[index].filename, filename, 255) == 0) {
+            std::unique_ptr<DirEntry> ret(new DirEntry);
+            ret->filename = std::string(records[index].filename, 0, 255);
+            ret->inode_idx = records[index].inode_idx;
+            return ret;
         }
     }
 
@@ -836,59 +974,48 @@ std::unique_ptr<IDirectory::DirEntry> IDirectory::get_file(const char *filename)
 }
 
 std::unique_ptr<IDirectory::DirEntry> IDirectory::remove_file(const char *filename) {
-    std::unique_ptr<DirEntry> last_entry = nullptr;
-    std::unique_ptr<DirEntry> entry = nullptr;
+    const uint64_t file_size_bytes = inode->data.file_size;
+    const uint64_t file_size_records = file_size_bytes / sizeof(RawRecord);
+    std::unique_ptr<Byte[]> read_buffer_unique(new Byte[file_size_bytes]);
+    RawRecord* records = (RawRecord *)read_buffer_unique.get();
 
-    size_t count = 0;
-    while (true) {
-        last_entry = std::move(entry);
-        entry = this->next_entry(last_entry);
-        if (entry == nullptr)
-            break ;
+    //read in the entire directory to memory
+    inode->read(0, (char *)records, file_size_bytes);
 
-        if (strcmp(entry->filename, filename) == 0) {
-
-            if (last_entry == nullptr) {
-                header.dir_entries_head = entry->data.next_entry_ptr;
-                if (entry->data.next_entry_ptr == 0) {
-                    header.dir_entries_tail = 0;
-                }
-            } else {
-                last_entry->data.next_entry_ptr = entry->data.next_entry_ptr;
-                last_entry->write_to_disk(last_entry->offset, nullptr);
-
-                if (last_entry->data.next_entry_ptr == 0) {
-                    header.dir_entries_tail = last_entry->offset;
-                }
-            }
-            
-            header.deleted_record_count++;
-            header.record_count--;
-            this->flush(); // make sure we flush out the changes to the header
-            return entry;
-        }
-
-        if (count++ > 50) {
-            break ;
+    //locate the file, if exists
+    for(uint64_t index = 0; index < file_size_records; index++) {
+        if(records[index].flag != 0 && strncmp(records[index].filename, filename, 255) == 0) {
+            std::unique_ptr<DirEntry> ret(new DirEntry);
+            ret->filename = std::string(records[index].filename, 0, 255);
+            ret->inode_idx = records[index].inode_idx;
+            records[index].flag = 0;
+            inode->write(sizeof(RawRecord) * index, (char *)&(records[index]), sizeof(RawRecord));
+            return ret;
         }
     }
 
     return nullptr;
 }
 
-std::unique_ptr<IDirectory::DirEntry> IDirectory::next_entry(const std::unique_ptr<IDirectory::DirEntry>& entry) {
-    std::unique_ptr<DirEntry> next(new DirEntry(this->inode));
-    if (entry == nullptr) {
-        if (header.record_count == 0)
-            return nullptr;
+std::vector< std::unique_ptr<IDirectory::DirEntry> > IDirectory::get_files() {
+    std::vector<std::unique_ptr<IDirectory::DirEntry> > out;
+    const uint64_t file_size_bytes = inode->data.file_size;
+    const uint64_t file_size_records = file_size_bytes / sizeof(RawRecord);
+    std::unique_ptr<Byte[]> read_buffer_unique(new Byte[file_size_bytes]);
+    RawRecord* records = (RawRecord *)read_buffer_unique.get();
 
-        next->read_from_disk(this->header.dir_entries_head);
-    } else {
-        if (entry->data.next_entry_ptr == 0) 
-            return nullptr; // reached the end of the linked list
+    //read in the entire directory to memory
+    inode->read(0, (char *)records, file_size_bytes);
 
-        next->read_from_disk(entry->data.next_entry_ptr);
+    //locate the file, if exists
+    for(uint64_t index = 0; index < file_size_records; index++) {
+        if(records[index].flag != 0) {
+            std::unique_ptr<DirEntry> ret(new DirEntry);
+            ret->filename = std::string(records[index].filename, 0, 255);
+            ret->inode_idx = records[index].inode_idx;
+            out.push_back(std::move(ret));
+        }
     }
-
-    return next;
+    
+    return out;
 }
